@@ -61,9 +61,12 @@ class FlowBoxView:
         self.widget = widget
     
     def clear(self):
-        pass
-        #self.widget.foreach()
-        pass 
+        def remove(child : Gtk.Widget):
+            #child.get_parent().destroy()
+            child.destroy()
+            
+        self.widget.foreach(remove)
+         
 
     def add_item(self, remote_file: RemoteFile):
         image_pixbuff  = self.pixmaps.get(remote_file.thumbnail , item=remote_file)
@@ -194,7 +197,12 @@ class Handler:
         self.window.source_icon.set_from_pixbuf(icon)
 
         if(self.window.search_box.get_text()):
-            self.async_search(self.window.search_box.get_text(), source)
+            if source.name in self.page_items and self.page_items[source.name]:
+                for file in self.page_items[source.name]:
+                    self.window.results.add_item(file)
+                    self.try_next_page(source, len(self.pages[source.name]))
+            else: 
+                self.async_search(self.window.search_box.get_text(), source)
 
     def results_selection_changed(self, box : Gtk.FlowBox):
         selected_items = box.get_selected_children()
@@ -242,7 +250,7 @@ class InkStockWindow(Window):
 
         RemoteSource.load(SOURCES)
         self.sources_pixmanager = PixmapManager(SOURCES, filters=[
-            SizeFilter(size=48),
+            SizeFilter(size=80),
             PadFilter(size=(0, 60))
         ])
         self.sources_lists.show_all()
