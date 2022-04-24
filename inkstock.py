@@ -109,7 +109,7 @@ class Handler:
     pages : dict[str, list[RemotePage]] = {}
     page_items : dict[str, list[RemoteFile]] = {}
     selected_resources = []
-    current_page = None
+    current_page : dict[str, RemotePage] = {}
 
     def __init__(self, window):
         self.window : InkStockWindow = window
@@ -128,7 +128,7 @@ class Handler:
         if current_index < last_index:
             next_page = self.pages[source_name][current_index+1]
             self.add_search_result(next_page)
-            self.current_page = next_page
+            self.current_page[source_name] = next_page
             self.try_next_page(self.get_selected_source(), current_index + 1)
         elif current_index == last_index:
             self.try_next_page(self.get_selected_source(), current_index + 1)
@@ -137,10 +137,11 @@ class Handler:
         pass
 
     def get_current_page_index(self):
-        current_pages = self.pages[self.get_selected_source().name]
+        source = self.get_selected_source() 
+        current_pages = self.pages[source.name]
         current_index = 0
         for index, page in enumerate(current_pages):
-            if self.current_page == page:
+            if self.current_page[source.name] == page:
                 current_index = index
         return current_index
 
@@ -154,20 +155,20 @@ class Handler:
     @asyncme.run_or_none
     def async_search(self, query, source: RemoteSource):
         """Asyncronous searching in PyPI"""
-        self.reset()
+        self.reset(source)
         first_page : RemotePage = source.search(query)
         if first_page:
             self.add_search_result(first_page)
             self.add_page(source.name, first_page)
-            self.current_page = first_page
+            self.current_page[source] = first_page
             self.try_next_page(source, page_no = 1)
 
-    def reset(self):
-        self.pages.clear()
-        self.page_items.clear()
+    def reset(self, source):
+        self.pages.setdefault(source.name, []).clear()
+        self.page_items.setdefault(source.name, []).clear()
         self.selected_resources.clear()
         self.window.results.clear()
-        self.current_page = None
+        self.current_page[source.name] = None
 
     def try_next_page(self, source : RemoteSource , page_no):
         next_page = source.get_page(page_no)
@@ -198,9 +199,15 @@ class Handler:
 
         if(self.window.search_box.get_text()):
             if source.name in self.page_items and self.page_items[source.name]:
+                self.window.results.clear()
                 for file in self.page_items[source.name]:
                     self.window.results.add_item(file)
-                    self.try_next_page(source, len(self.pages[source.name]))
+                index = self.get_current_page_index()
+                #check if there's a next page
+                if index < len(self.pages[source.name]) - 1:
+                    self.window.load_more_btn.show()
+                else:
+                    self.window.load_more_btn.hide()
             else: 
                 self.async_search(self.window.search_box.get_text(), source)
 
