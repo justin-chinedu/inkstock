@@ -13,14 +13,14 @@ from inkex.elements import (
     load_svg, Image, Defs, NamedView, Metadata,
     SvgDocumentElement, StyleElement
 )
-from inkex.gui.listview import IconView
+from inkex.gui.listview import GOBJ, IconView
 """TODO: Override pixelmapmanger's load_from_name_method"""
 from inkex.gui.pixmap import PadFilter, PixmapManager, SizeFilter
 from inkex.gui.window import Window
 from inkex.styles import Style
 from remote import RemoteSource, RemotePage, RemoteFile
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 
 from inkex import EffectExtension
 
@@ -40,6 +40,45 @@ class ListBoxRowWithData(Gtk.ListBoxRow):
         self.set_size_request(50, 40)
         self.add(Gtk.Label(label=name))
 
+class FlowBoxChildWithData(Gtk.FlowBoxChild):
+    def __init__(self, icon, title, index):
+        super().__init__()
+        self.icon = icon
+        self.title = title
+        self.index = index
+        builder = Gtk.Builder()
+        builder.add_objects_from_file(
+            'ui/inkstocks.ui', ("result_item", ""))
+        self.result_item = builder.get_object("result_item")
+        builder.get_object("result_image").set_from_file(self.icon)
+        builder.get_object("result_text").set_text(self.title)
+        self.add(self.result_item)
+
+
+class FlowBoxView:
+    def __init__(self, widget : Gtk.FlowBox , pixmaps : PixmapManager) -> None:
+        self.pixmaps = pixmaps
+        self.widget = widget
+    
+    def clear(self):
+        pass
+        #self.widget.foreach()
+        pass 
+
+    def add_item(self, remote_file: RemoteFile):
+        image_pixbuff  = self.pixmaps.get(remote_file.thumbnail , item=remote_file)
+        builder = Gtk.Builder()
+        builder.add_objects_from_file(
+            'ui/inkstocks.ui', ("result_item", ""))
+        result_item = builder.get_object("result_item")
+        image : Gtk.Image = builder.get_object("result_image")
+        image.set_from_pixbuf(image_pixbuff)
+        text = builder.get_object("result_text")
+        text.set_text(remote_file.string)
+        self.widget.add(result_item)
+    
+
+
 
 class ResultsIconView(IconView):
     """The search results shown as icons"""
@@ -51,10 +90,10 @@ class ResultsIconView(IconView):
         return item.thumbnail
 
     def setup(self):
-        self._list.set_markup_column(1)
-        self._list.set_pixbuf_column(2)
-        crt, crp = self._list.get_cells()
-        self.crt_notify = crt.connect('notify', self.keep_size)
+        # self._list.set_markup_column(1)
+        # self._list.set_pixbuf_column(2)
+        # crt, crp = self._list.get_cells()
+        # self.crt_notify = crt.connect('notify', self.keep_size)
         super().setup()
 
     def keep_size(self, crt, *args):
@@ -157,13 +196,13 @@ class Handler:
         if(self.window.search_box.get_text()):
             self.async_search(self.window.search_box.get_text(), source)
 
-    def results_selection_changed(self, items: IconView):
-        selected_items = items.get_selected_items()
+    def results_selection_changed(self, box : Gtk.FlowBox):
+        selected_items = box.get_selected_children()
         self.selected_resources.clear()
         name = self.get_selected_source().name
 
         for item in selected_items:
-            index = item.get_indices()[0]
+            index = item.get_index()
             resource = self.page_items[name][index]
             self.selected_resources.append(resource)
         enabled = bool(self.selected_resources)
@@ -175,9 +214,14 @@ class Handler:
 class InkStockWindow(Window):
     name = "inkstocks_window"
 
-    def __init__(self, gapp):
+    def __init__(self, gapp : GtkApp):
         super().__init__(gapp)
-        self.window : Gtk.Window
+        css = """
+        .results {
+            background: white;
+        }
+        """
+        self.load_css(css)
         self.search_spinner = self.widget('search_spinner')
         self.search_spinner.hide()
         self.load_more_btn: Gtk.Button = self.widget('load_more_btn')
@@ -188,7 +232,8 @@ class InkStockWindow(Window):
         self.source_desc = self.widget('source_desc')
         self.source_icon = self.widget('source_icon')
         self.search_box = self.widget('search_box')
-        self.page_stack = self.widget('page_stack')
+        self.page_stack : Gtk.Stack = self.widget('page_stack')
+        
         
         self.sources_lists : Gtk.ListBox = self.widget('sources_lists')
 
@@ -223,13 +268,23 @@ class InkStockWindow(Window):
          
         resultBuilder = Gtk.Builder()
         resultBuilder.add_objects_from_file(
-           "ui/inkstocks.ui", ("flow_scroll_window", ""))
-        self.results_widget = resultBuilder.get_object("results")
-        self.results = ResultsIconView(self.results_widget, results_pixmanager, list_store = RemoteFile)
+           "ui/inkstocks.ui", ("flow_scroll_window_copy", ""))
+        self.results_widget = resultBuilder.get_object("results_flow")
+        #self.results = ResultsIconView(self.results_widget, results_pixmanager, liststore = RemoteFile)
+        self.results = FlowBoxView(self.results_widget, results_pixmanager)
+        
         resultBuilder.connect_signals(self.signal_handler)
         self.page_stack.add_named(
-            resultBuilder.get_object("flow_scroll_window"), 'results_window')
+            resultBuilder.get_object("flow_scroll_window_copy"), 'results_window')
         
+    def load_css(self, data : str):
+        css_prov = Gtk.CssProvider()
+        css_prov.load_from_data(data.encode('utf8'))
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            css_prov,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
 
 class InkStockApp(GtkApp):
     app_name = "InkStock"
