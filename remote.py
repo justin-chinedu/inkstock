@@ -202,6 +202,8 @@ class RemoteSource:
     def to_local_file(self, url, name):
         """Get a remote url and turn it into a local file"""
         filepath = os.path.join(self.cache_dir, name)
+        if os.path.exists(filepath):
+            return filepath
         headers = {"User-Agent": "Inkscape"}
         try:
             remote = self.session.get(

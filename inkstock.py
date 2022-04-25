@@ -14,6 +14,7 @@ from inkex.elements import (
     SvgDocumentElement, StyleElement
 )
 from inkex.gui.listview import GOBJ, IconView
+from utils.utils import StopWatch
 """TODO: Override pixelmapmanger's load_from_name_method"""
 from inkex.gui.pixmap import PadFilter, PixmapManager, SizeFilter
 from inkex.gui.window import Window
@@ -41,19 +42,11 @@ class ListBoxRowWithData(Gtk.ListBoxRow):
         self.add(Gtk.Label(label=name))
 
 class FlowBoxChildWithData(Gtk.FlowBoxChild):
-    def __init__(self, icon, title, index):
+    def __init__(self, widget, data):
         super().__init__()
-        self.icon = icon
-        self.title = title
-        self.index = index
-        builder = Gtk.Builder()
-        builder.add_objects_from_file(
-            'ui/inkstocks.ui', ("result_item", ""))
-        self.result_item = builder.get_object("result_item")
-        builder.get_object("result_image").set_from_file(self.icon)
-        builder.get_object("result_text").set_text(self.title)
-        self.add(self.result_item)
-
+        self.data = data
+        self.add(widget)
+        self.show_all()
 
 class FlowBoxView:
     def __init__(self, widget : Gtk.FlowBox , pixmaps : PixmapManager) -> None:
@@ -62,9 +55,7 @@ class FlowBoxView:
     
     def clear(self):
         def remove(child : Gtk.Widget):
-            #child.get_parent().destroy()
             child.destroy()
-            
         self.widget.foreach(remove)
          
 
@@ -78,10 +69,7 @@ class FlowBoxView:
         image.set_from_pixbuf(image_pixbuff)
         text = builder.get_object("result_text")
         text.set_text(remote_file.string)
-        self.widget.add(result_item)
-    
-
-
+        self.widget.add(FlowBoxChildWithData(result_item, remote_file))
 
 class ResultsIconView(IconView):
     """The search results shown as icons"""
@@ -110,7 +98,7 @@ class Handler:
     page_items : dict[str, list[RemoteFile]] = {}
     selected_resources = []
     current_page : dict[str, RemotePage] = {}
-
+    
     def __init__(self, window):
         self.window : InkStockWindow = window
    
@@ -145,30 +133,42 @@ class Handler:
                 current_index = index
         return current_index
 
+    watch = StopWatch()
     @asyncme.run_or_none
     def search_changed(self, search_entry):
         source = self.get_selected_source()
         query = search_entry.get_text()
         if query and (len(query) > 2):
-            self.async_search(query, source)
-            
+            self.watch.start_or_reset(1, self.async_search, query, source, reset_all= True)
+            #self.async_search(query, source, reset_all= True)
+        else:
+            self.watch.cancel()
+  
     @asyncme.run_or_none
-    def async_search(self, query, source: RemoteSource):
+    def async_search(self, query, source: RemoteSource, reset_all = False):
         """Asyncronous searching in PyPI"""
-        self.reset(source)
+        self.reset(source, reset_all)
         first_page : RemotePage = source.search(query)
         if first_page:
             self.add_search_result(first_page)
             self.add_page(source.name, first_page)
-            self.current_page[source] = first_page
+            self.current_page[source.name] = first_page
             self.try_next_page(source, page_no = 1)
 
-    def reset(self, source):
-        self.pages.setdefault(source.name, []).clear()
-        self.page_items.setdefault(source.name, []).clear()
+    def reset(self, source, reset_all = False):
+        if reset_all:
+            for item in self.pages.keys():
+                self.pages[item].clear()
+            for item in self.page_items.keys():
+                self.page_items[item].clear()
+            for item in self.current_page.keys():
+                self.current_page[item] = None
+        else:
+            self.pages.setdefault(source.name, []).clear()
+            self.page_items.setdefault(source.name, []).clear()
+        
         self.selected_resources.clear()
         self.window.results.clear()
-        self.current_page[source.name] = None
 
     def try_next_page(self, source : RemoteSource , page_no):
         next_page = source.get_page(page_no)
@@ -197,7 +197,9 @@ class Handler:
         self.window.source_icon.clear()
         self.window.source_icon.set_from_pixbuf(icon)
 
-        if(self.window.search_box.get_text()):
+        query = self.window.search_box.get_text()
+        
+        if query:
             if source.name in self.page_items and self.page_items[source.name]:
                 self.window.results.clear()
                 for file in self.page_items[source.name]:
@@ -214,23 +216,19 @@ class Handler:
     def results_selection_changed(self, box : Gtk.FlowBox):
         selected_items = box.get_selected_children()
         self.selected_resources.clear()
-        name = self.get_selected_source().name
 
         for item in selected_items:
-            index = item.get_index()
-            resource = self.page_items[name][index]
-            self.selected_resources.append(resource)
+            self.selected_resources.append(item.data)
         enabled = bool(self.selected_resources)
         self.window.widget('import_files_btn').set_sensitive(enabled)
         self.window.widget('no_of_selected').set_text(f"{len(self.selected_resources)} items selected")
-
-    
 
 class InkStockWindow(Window):
     name = "inkstocks_window"
 
     def __init__(self, gapp : GtkApp):
         super().__init__(gapp)
+        self.gapp = gapp
         css = """
         .results {
             background: white;
@@ -248,7 +246,7 @@ class InkStockWindow(Window):
         self.source_icon = self.widget('source_icon')
         self.search_box = self.widget('search_box')
         self.page_stack : Gtk.Stack = self.widget('page_stack')
-        
+        self.import_files_btn.connect('clicked', self.import_files)
         
         self.sources_lists : Gtk.ListBox = self.widget('sources_lists')
 
@@ -283,15 +281,20 @@ class InkStockWindow(Window):
          
         resultBuilder = Gtk.Builder()
         resultBuilder.add_objects_from_file(
-           "ui/inkstocks.ui", ("flow_scroll_window_copy", ""))
+           "ui/inkstocks.ui", ("flow_scroll_window", ""))
         self.results_widget = resultBuilder.get_object("results_flow")
         #self.results = ResultsIconView(self.results_widget, results_pixmanager, liststore = RemoteFile)
         self.results = FlowBoxView(self.results_widget, results_pixmanager)
         
         resultBuilder.connect_signals(self.signal_handler)
         self.page_stack.add_named(
-            resultBuilder.get_object("flow_scroll_window_copy"), 'results_window')
-        
+            resultBuilder.get_object("flow_scroll_window"), 'results_window')
+    
+    def import_files(self, widget):
+        selected : list[RemoteFile]= self.signal_handler.selected_resources
+        for file in selected:
+            self.gapp.ext.import_from_file(file.get_file())
+
     def load_css(self, data : str):
         css_prov = Gtk.CssProvider()
         css_prov.load_from_data(data.encode('utf8'))
@@ -307,6 +310,11 @@ class InkStockApp(GtkApp):
     ui_file = "inkstocks"
     glade_dir = os.path.join(os.path.dirname(__file__))
     windows = [InkStockWindow]
+
+    def __init__(self, start_loop=False, start_gui=True, **kwargs):
+        self.ext = kwargs.setdefault("ext", None)
+        super().__init__(start_loop, start_gui, **kwargs)
+        
 
 class InkstockExtension(EffectExtension):
 
@@ -390,7 +398,8 @@ class InkstockExtension(EffectExtension):
                     child.set("inkscape:groupmode", None)
 
     def effect(self) :
-        InkStockApp(start_loop=True,)
+       app = InkStockApp(start_loop=True, ext = self )
+
         
 
     @staticmethod
@@ -412,4 +421,4 @@ class InkstockExtension(EffectExtension):
 
 if __name__ == '__main__':
     InkStockApp(start_loop=True)
-    #InkstockExtension().run()
+    InkstockExtension().run()
