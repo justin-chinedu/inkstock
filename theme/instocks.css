@@ -1,0 +1,22 @@
+window flowbox > flowboxchild {
+    background-color: white;
+    color: black;
+    box-shadow: 5px 5px 5px 2px #000000cd;
+    outline-style: none;
+}
+
+window flowbox > flowboxchild:selected {
+    background-color: #c0f0f5;
+    opacity: 0.5;
+    color: black;
+}
+
+.options {
+    background-color: transparent;
+  }
+
+ .transparent {
+     background-color: transparent;
+     padding: 0px;
+ }
+  

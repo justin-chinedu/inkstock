@@ -1,13 +1,16 @@
-
 import importlib
 import logging
 import os
 import sys
-import requests
 
-from cachecontrol import CacheControl, CacheControlAdapter
+import requests
+from cachecontrol import CacheControlAdapter
 from cachecontrol.caches.file_cache import FileCache
 from cachecontrol.heuristics import ExpiresAfter
+from gi.repository import Gtk
+
+from inkex.gui import asyncme
+from windows.basic_window import BasicWindow
 
 LICENSE_ICONS = os.path.join(os.path.dirname(__file__), 'licenses')
 
@@ -104,8 +107,8 @@ LICENSES = {
     },
 }
 
-class RemoteFile:
 
+class RemoteFile:
     thumbnail = property(lambda self: self.remote.to_local_file(self.info["thumbnail"]))
     get_file = lambda self: self.remote.to_local_file(self.info["file"])
 
@@ -114,7 +117,8 @@ class RemoteFile:
             if field not in info:
                 raise ValueError(f"Field {field} not provided in RemoteFile package")
         self.info = info
-        self.remote = remote
+        self.id = hash(str(info))
+        self.remote: RemoteSource = remote
 
     @property
     def string(self):
@@ -127,29 +131,31 @@ class RemoteFile:
     @property
     def license_info(self):
         return LICENSES.get(self.license, {
-           "name": "Unknown",
-           "url": self.info.get("descriptionurl", ""),
-           "modules": [],
-           "overlay": "unknown.svg",
+            "name": "Unknown",
+            "url": self.info.get("descriptionurl", ""),
+            "modules": [],
+            "overlay": "unknown.svg",
         })
 
     @property
     def author(self):
         return self.info["author"]
 
+
 class RemotePage:
 
-    def __init__(self,remote_source ,page_no : int):
+    def __init__(self, remote_source, page_no: int):
         self.page_no = page_no
         self.remote_source = remote_source
-        
-    def get_page_content(self) :
+
+    def get_page_content(self):
         """Should be implemented
             Simply yields a list of remotefiles
         """
         raise NotImplementedError(
             "You must implement a search function for this remote source!"
         )
+
 
 class RemoteSource:
     name = None
@@ -160,8 +166,11 @@ class RemoteSource:
     is_default = False
     is_enabled = True
     items_per_page = 10
-    
+    window_cls = BasicWindow
+    window: BasicWindow = None
+
     sources = {}
+
     def __init_subclass__(cls):
         if cls != RemoteSource:
             cls.sources[cls.__name__] = cls
@@ -196,19 +205,27 @@ class RemoteSource:
             "You must implement a search function for this remote source!"
         )
 
+    def on_window_attached(self, window: BasicWindow, window_pane: Gtk.Paned):
+        self.window = window
+        window_pane.set_position(0)
+
     def __del__(self):
         self.session.close()
 
-    def to_local_file(self, url, name):
+    def to_local_file(self, url, name, headers=None):
         """Get a remote url and turn it into a local file"""
         filepath = os.path.join(self.cache_dir, name)
         if os.path.exists(filepath):
             return filepath
-        headers = {"User-Agent": "Inkscape"}
+
+        if not headers:
+            headers = {"User-Agent": "Inkscape"}
         try:
             remote = self.session.get(
                 url, headers=headers
-            )  # needs UserAgent otherwise many 403 or 429 for wiki commons
+            )
+            # self.session.close()
+            # needs UserAgent otherwise many 403 or 429 for wiki commons
         except requests.exceptions.RequestException as err:
             return None
         except ConnectionError as err:
@@ -237,4 +254,3 @@ class RemoteSource:
             for child in os.listdir(name):
                 if not child.startswith("_") and child.endswith(".py"):
                     cls.load(os.path.join(name, child))
-

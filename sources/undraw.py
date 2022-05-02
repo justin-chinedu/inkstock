@@ -1,27 +1,61 @@
-
 import json
 import sys
+
+from inkex.gui import asyncme
+from utils.constants import CACHE_DIR
+from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
+
+from windows.basic_window import BasicWindow
+from windows.options_window import OptionsWindow, OptionType, ChangeReciever
 
 sys.path.insert(
     1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
 
 from remote import RemoteFile, RemotePage, RemoteSource
 
+
+class UndrawWindow(BasicWindow):
+    name = "undraw_window"
+
+    def __init__(self, gapp):
+        self.name = "basic_window"
+        super().__init__(gapp)
+
+    def get_pixmaps(self):
+        return PixmapManager(CACHE_DIR, pref_width=300,
+                             pref_height=300, scale=1,
+                             grid_item_height=300,
+                             grid_item_width=300,
+                             padding=30,
+                             aspect_ratio=SIZE_ASPECT_GROW)
+
+
 class UndrawIllustration(RemoteFile):
-    thumbnail = property(lambda self: self.remote.to_local_file(self.info["thumbnail"], self.info["name"] + '.svg'))
-    get_file = lambda self: self.remote.to_local_file(self.info["file"], self.info["name"] + '.svg')
+
+    def __init__(self, remote, info):
+        super().__init__(remote, info)
+        self.name = f"{self.info['name'][:7]}-{str(self.id)}-undraw"
+
+    @property
+    def thumbnail(self):
+        name = self.name + ".svg"
+        return self.remote.to_local_file(self.info["thumbnail"], name)
+
+    def get_file(self):
+        name = self.name + "file.svg"
+        return self.remote.to_local_file(self.info["file"], name)
 
 
-class UndrawPage(RemotePage):
-    def __init__( self,remote_source : RemoteSource ,page_no, results):
-        super().__init__( remote_source ,page_no)
-        self.results =  results
+class UndrawPage(RemotePage, ChangeReciever):
+    def __init__(self, remote_source: RemoteSource, page_no, results):
+        super().__init__(remote_source, page_no)
+        self.results = results
         self.remote_source = remote_source
-        
+
     def get_page_content(self):
-        for result in  self.results:
+        for result in self.results:
             yield UndrawIllustration(self.remote_source, result)
-        
+
 
 class Undraw(RemoteSource):
     name = "Undraw"
@@ -33,37 +67,61 @@ class Undraw(RemoteSource):
     is_enabled = True
     items_per_page = 10
     reqUrl = "https://undraw.co/api/search"
+    window_cls = UndrawWindow
 
+    def __init__(self, cache_dir):
+        super().__init__(cache_dir)
+        self.query = ""
+        self.results = []
+        self.options = {}
+        self.options_window = OptionsWindow(self)
+        self.options_window.set_option("query", None, OptionType.SEARCH, "Search unDraw")
+        self.options_window.set_option(
+            "color", None, OptionType.COLOR, "Choose theme color")
 
     def get_page(self, page_no: int):
         self.current_page = page_no
-        results = self.results[page_no * self.items_per_page: self.items_per_page*(page_no + 1)]
-        if not results : return None
-        return UndrawPage(self, page_no, results)
-    
+        results = self.results[page_no * self.items_per_page: self.items_per_page * (page_no + 1)]
+        if results:
+            page = UndrawPage(self, page_no, results)
+            self.window.add_page(page)
+
     def search(self, query, tags=...):
         self.results = []
         query = query.lower().replace(' ', '_')
-
+        self.query = query
+        self.window.clear_pages()
+        self.window.show_spinner()
         headersList = {
-        "Accept": "*/*",
-        "User-Agent": "Inkscape",
-        "Content-Type": "application/json" 
+            "Accept": "*/*",
+            "User-Agent": "Inkscape",
+            "Content-Type": "application/json"
         }
 
         payload = json.dumps({"query": query})
+        try:
+            response = self.session.request("POST", self.reqUrl, data=payload, headers=headersList)
+            illus = response.json()["illos"]
+            for item in illus:
+                result = {
+                    "thumbnail": item["image"],
+                    "file": item["image"],
+                    "name": item["title"],
+                    "license": ""
+                }
+                self.results.append(result)
+            self.get_page(0)
+        except:
+            print("There was an error trying to fetch content")
 
-        response = self.session.request("POST", self.reqUrl, data=payload,  headers=headersList)
-        illus = response.json()["illos"]
-        for item in illus:
-            result = {
-                "thumbnail" : item["image"],
-                "file" : item["image"],
-                "name" : item["title"],
-                "license" : ""
-            }
-            self.results.append(result)
-        
-        return self.get_page(0)
+    def on_window_attached(self, window: BasicWindow, window_pane):
+        super().on_window_attached(window, window_pane)
+        window_pane.set_position(350)
+        self.query = ""
+        self.window.show_options_window(self.options_window.window)
 
-    
+    def on_change(self, options):
+        self.options = options
+        if self.query != options["query"]:
+            self.query = options["query"]
+            self.search(self.query)
