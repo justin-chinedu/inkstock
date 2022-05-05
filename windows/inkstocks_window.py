@@ -47,7 +47,6 @@ class InkStocksWindow(Window):
         self.search_box = self.widget('search_box')
         self.page_stack: Gtk.Stack = self.widget('page_stack')
         self.import_files_btn.connect('clicked', self.import_files)
-
         self.sources_lists: Gtk.ListBox = self.widget('sources_lists')
 
         self.signal_handler = MainHandler(self)

@@ -1,26 +1,73 @@
 import sys
+
+from numpy import sort
+
+from inkex.gui import asyncme
+from utils.constants import CACHE_DIR
+from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW, SIZE_ASPECT_CROP
+from windows.basic_window import BasicWindow
+from windows.options_window import OptionsWindow, OptionType
+
 sys.path.insert(
     1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
 
 from remote import RemoteFile, RemotePage, RemoteSource
 import json
-import os
-import time
 from os.path import exists
-from numpy import sort
-import requests
+
+
+class MaterialWindow(BasicWindow):
+    name = "material_window"
+
+    def __init__(self, gapp):
+        self.name = "basic_window"
+        super().__init__(gapp)
+
+    def get_pixmaps(self):
+        pix = PixmapManager(CACHE_DIR, scale=8,
+                            grid_item_height=200,
+                            grid_item_width=200,
+                            padding=120)
+
+        pix.enable_aspect = False
+        pix.preview_scaling = 7
+        pix.preview_padding = 30
+        pix.preview_aspect_ratio = SIZE_ASPECT_GROW
+        pix.preview_item_height = 100
+        pix.preview_item_width = 100
+        pix.style = """.{id}{{
+            background-color: white;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-origin: content-box;
+            background-image: url("{url}");
+            }}
+        """
+        return pix
+
 
 class MaterialIcon(RemoteFile):
-    thumbnail = property(lambda self: self.remote.to_local_file(self.info["thumbnail"], self.info["name"] + '.svg'))
-    get_file = lambda self: self.remote.to_local_file(self.info["file"], self.info["name"] + '.svg')
+    def __init__(self, remote, info):
+        super().__init__(remote, info)
+        self.name = f"{self.info['name'][:7]}-{str(self.id)}-material"
+
+    @property
+    def thumbnail(self):
+        name = self.name + ".svg"
+        return self.remote.to_local_file(self.info["thumbnail"], name)
+
+    def get_file(self):
+        name = self.name + "file.svg"
+        return self.remote.to_local_file(self.info["file"], name)
 
 class MaterialIconsPage(RemotePage):
     def __init__( self,remote_source : RemoteSource ,page_no, results):
         super().__init__( remote_source ,page_no)
         self.results =  results
         self.remote_source = remote_source
-        
+
     def get_page_content(self):
+        files = []
         for url in  self.results:
         
             if url.split('/')[9].replace('materialicons', '') == '':
@@ -49,7 +96,8 @@ class MaterialIconsPage(RemotePage):
                 "file": url,
             }
 
-            yield MaterialIcon(self.remote_source, info)
+            files.append(MaterialIcon(self.remote_source, info))
+        return files
 
 
 class MaterialIconsSource(RemoteSource):
@@ -61,10 +109,20 @@ class MaterialIconsSource(RemoteSource):
     is_default = True
     is_enabled = True
     is_optimized = False
-    items_per_page = 10
+    items_per_page = 16
+    window_cls = MaterialWindow
 
     def __init__(self, cache_dir):
         super().__init__(cache_dir)
+        self.query = ""
+        self.results = []
+        self.options = {}
+        self.options_window = OptionsWindow(self)
+        self.options_window.set_option("query", None, OptionType.SEARCH, "Search Material Icons")
+        self.options_window.set_option(
+            "color", None, OptionType.COLOR, "Choose theme color")
+
+        # -----------------------
         json_exists = exists('json/material-icons.json')
         optimized_json_exists = exists('json/material-icons-optimized.json')
         if optimized_json_exists:
@@ -78,12 +136,18 @@ class MaterialIconsSource(RemoteSource):
 
     def get_page(self, page_no: int):
         self.current_page = page_no
-        results = self.results[page_no * self.items_per_page: self.items_per_page*(page_no + 1)]
-        if not results : return None
-        return MaterialIconsPage(self, page_no, results)
+        results = self.results[page_no * self.items_per_page: self.items_per_page * (page_no + 1)]
+        if results:
+            page = MaterialIconsPage(self, page_no, results)
+            self.window.add_page(page)
 
-    def search(self, query):
+    @asyncme.run_or_none
+    def search(self, query, tags=None):
+        self.results = []
         query = query.lower().replace(' ', '_')
+        self.query = query
+        self.window.clear_pages()
+        self.window.show_spinner()
         if self.is_optimized:
             try:
                 self.results = self.opt_icon_map[query]
@@ -92,13 +156,20 @@ class MaterialIconsSource(RemoteSource):
         else:
             self.results = [value for key, value in self.icon_map.items()
                             if key.startswith(query)]
-        return self.get_page(0)
+        self.get_page(0)
 
+    def on_window_attached(self, window: BasicWindow, window_pane):
+        super().on_window_attached(window, window_pane)
+        window_pane.set_position(350)
+        self.query = "a"
+        self.window.show_options_window(self.options_window.window)
+        self.search("a")
 
-    def result_to_cls(self, info):
-        if callable(info):
-            return self.page_cls(self, info, self.current_page+1)
-        return self.file_cls(self, info)
+    def on_change(self, options):
+        self.options = options
+        if self.query != options["query"]:
+            self.query = options["query"]
+            self.search(self.query)
 
 
 def get_results(results):
@@ -181,7 +252,6 @@ def read_map_file(path):
         m = json.load(f)
         f.close()
     return m
-
 
 def save_json_file(json_file):
     with open('/sdcard/material-icons-optimized.json', mode='wt') as f:

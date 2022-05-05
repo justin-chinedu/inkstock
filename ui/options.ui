@@ -75,6 +75,13 @@
             </packing>
         </child>
     </object>
+    <object class="GtkLinkButton" id="options_link">
+        <property name="label" translatable="yes">button</property>
+        <property name="visible">True</property>
+        <property name="can-focus">True</property>
+        <property name="receives-default">True</property>
+        <property name="relief">none</property>
+    </object>
     <object class="GtkListBox" id="options_listbox">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
@@ -116,7 +123,7 @@
                 <property name="primary-icon-sensitive">False</property>
                 <property name="placeholder-text" translatable="yes">Search</property>
                 <property name="show-emoji-icon">True</property>
-                <signal name="search-changed" handler="search_changed" swapped="no"/>
+                <signal name="activate" handler="search_changed" swapped="no"/>
             </object>
             <packing>
                 <property name="expand">False</property>
@@ -161,5 +168,13 @@
                 <property name="position">1</property>
             </packing>
         </child>
+    </object>
+    <object class="GtkTextView" id="options_textview">
+        <property name="visible">True</property>
+        <property name="can-focus">True</property>
+        <property name="editable">False</property>
+        <property name="wrap-mode">word</property>
+        <property name="cursor-visible">False</property>
+        <property name="monospace">True</property>
     </object>
 </interface>

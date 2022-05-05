@@ -18,9 +18,18 @@ SIZE_ASPECT_CROP = 2
 
 class PixmapManager:
     pixmap_dir = None
+    # Default styling for items, All styles must follow this template
+    style = """.{id}{{
+            background-size: cover;
+            background-origin: content-box;
+            background: url("{url}") no-repeat;
+            }}
+        """
 
     def __init__(self, cache_dir, scale=0.7, pref_width=200, pref_height=200,
                  padding=0, aspect_ratio=SIZE_ASPECT_CROP, grid_item_width=400, grid_item_height=300):
+        self.enable_aspect = True
+        self.enable_padding = True
         self.grid_item_width = grid_item_width
         self.grid_item_height = grid_item_height
         self.aspect_ratio = aspect_ratio
@@ -28,39 +37,88 @@ class PixmapManager:
         self.pref_height = pref_height
         self.pref_width = pref_width
 
+        self.preview_item_width = 150
+        self.preview_item_height = 100
+        self.preview_padding = self.padding
+        self.preview_scaling = 0.5
+        self.preview_aspect_ratio = SIZE_ASPECT_CROP
+
         self.scale = scale
         self.cache_dir = cache_dir
         self.cache = {}
 
+    def get_pixbuf_from_file_for_previews(self, file, selected_file, callback):
+        def run(*args):
+            thumbnail = file.thumbnail
+            if thumbnail:
+                pixbuf_path = self.__get_pixbuf(thumbnail, self.preview_item_width, self.preview_item_height,
+                                                self.preview_padding, self.preview_scaling, self.preview_aspect_ratio,
+                                                skip_cache=True)
+                callback(pixbuf_path, *args)
+            else:
+                raise ValueError("Thumbnail returned from source was null")
+
+        asyncme.run_or_none(run)(file, selected_file)
+
     def get_pixbuf_from_file(self, file, callback):
         def run(*args):
             thumbnail = file.thumbnail
-            pixbuf_path = self.get_pixbuf(thumbnail)
-            callback(pixbuf_path, *args)
+            if thumbnail:
+                pixbuf_path = self.__get_pixbuf(thumbnail, self.pref_width, self.pref_height, self.padding, self.scale,
+                                                SIZE_ASPECT_CROP)
+                callback(pixbuf_path, *args)
+            else:
+                raise ValueError("Thumbnail returned from source was null")
 
-        asyncme.run_or_wait(run)(file)
+        asyncme.run_or_none(run)(file)
 
-    def get_pixbuf(self, name: str):
+    def get_pixbuf_for_preview(self, file, callback):
+        def run(*args):
+            thumbnail = file.thumbnail
+            if thumbnail:
+
+                pixbuf = self.__get_pixbuf(thumbnail, self.pref_width, self.pref_height, self.padding, self.scale,
+                                           SIZE_ASPECT_GROW, return_pixbuf=True, skip_cache=True)
+                callback(pixbuf)
+            else:
+                raise ValueError("Thumbnail returned from source was null")
+
+        asyncme.run_or_none(run)(file)
+
+    def __get_pixbuf(self, name: str, pref_width, pref_height, padding, scale, aspect_ratio, return_pixbuf=False,
+                     skip_cache=False):
         key = name[-30:]  # bytes or string
-        if key not in self.cache:
-            if self.data_is_file(name):
-                pixmap_path = self.pixmap_path(name)
-                img = self.load_file_from_path(pixmap_path, self.scale)
-                aspect = self.set_aspect(img, self.pref_width, self.pref_height, self.padding)
-                aspect.savev(pixmap_path, "png")
-                self.cache[key] = pixmap_path
-                return pixmap_path
-        else:
-            return self.cache[key]
+        pixmap_path = self.pixmap_path(name)
 
-    def set_aspect(self, img: GdkPixbuf.Pixbuf, pref_width, pref_height, padding=0) -> GdkPixbuf.Pixbuf:
+        if key not in self.cache or skip_cache:
+            if self.data_is_file(name):
+                img = self.load_file_from_path(pixmap_path, scale)
+                if self.enable_aspect:
+                    img = self.set_aspect(img, pref_width, pref_height, aspect_ratio)
+                if self.enable_padding:
+                    img = self.set_padding(img, padding)
+                img.savev(pixmap_path, "png")
+                if not skip_cache:
+                    self.cache[key] = img
+                if return_pixbuf:
+                    return img
+                else:
+                    return pixmap_path
+        else:
+            if return_pixbuf:
+                return self.cache[key]
+            else:
+                return pixmap_path
+
+    def set_aspect(self, img: GdkPixbuf.Pixbuf, pref_width, pref_height,
+                   aspect_ratio=SIZE_ASPECT_CROP) -> GdkPixbuf.Pixbuf:
         img_w = img.get_width()
         img_h = img.get_height()
         aspect = img_w / img_h
 
         mod_img = None
 
-        if self.aspect_ratio == SIZE_ASPECT_CROP:
+        if aspect_ratio == SIZE_ASPECT_CROP:
 
             w_greater = pref_width > img_w and pref_width > pref_height
             h_greater = pref_height > img_h and pref_height > pref_width
@@ -72,10 +130,10 @@ class PixmapManager:
                 the width based on the aspect ratio"""
             if w_greater:
                 h = pref_width / aspect
-                img = img.scale_simple(pref_width - padding, h - padding, BILINEAR)
+                img = img.scale_simple(pref_width, h, BILINEAR)
             elif h_greater:
                 w = pref_height / aspect
-                img = img.scale_simple(w - padding, pref_height - padding, BILINEAR)
+                img = img.scale_simple(w, pref_height, BILINEAR)
             elif not both_greater:
                 """if both are lesser we scale down the image by scaling down the shortest side and calculating
                 the longer side based on the aspect ratio"""
@@ -108,12 +166,13 @@ class PixmapManager:
             mod_img = cropped
         else:
             if img_w > img_h:
-                img = img.scale_simple(pref_width, pref_width / aspect, BILINEAR)
+                img = img.scale_simple(pref_width, pref_width / aspect, HYPER)
             elif img_h > img_w:
-                img = img.scale_simple(pref_height * aspect, pref_height, BILINEAR)
+                img = img.scale_simple(pref_height * aspect, pref_height, HYPER)
             else:
-                img = img.scale_simple(pref_width, pref_width, BILINEAR)
+                img = img.scale_simple(pref_width, pref_width, HYPER)
 
+            # FIXME: Make filling resized image unto new pixbuf
             filled = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, pref_width,
                                           pref_height)
             x = pref_width / 2 - min(pref_width, img.get_width()) / 2
@@ -121,16 +180,31 @@ class PixmapManager:
 
             img.copy_area(0, 0, img.get_width(), img.get_height(), filled, math.floor(x), math.floor(y))
             mod_img = filled
-        if padding > 0:
-            padded = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, pref_width + padding,
-                                          pref_height + padding)
-            x = padded.get_width() / 2 - min(padded.get_width(), mod_img.get_width()) / 2
-            y = padded.get_height() / 2 - min(padded.get_height(), mod_img.get_height()) / 2
-
-            mod_img.copy_area(0, 0, mod_img.get_width(), mod_img.get_height(), padded, math.floor(x), math.floor(y))
-            del mod_img
-            return padded.scale_simple(pref_width, pref_height, BILINEAR)
+        # if padding > 0:
+        #     padded = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 24, pref_width + padding,
+        #                                   pref_height + padding)
+        #     x = padded.get_width() / 2 - min(padded.get_width(), mod_img.get_width()) / 2
+        #     y = padded.get_height() / 2 - min(padded.get_height(), mod_img.get_height()) / 2
+        #
+        #     mod_img.copy_area(0, 0, mod_img.get_width(), mod_img.get_height(), padded, math.floor(x), math.floor(y))
+        #     del mod_img
+        #     return padded.scale_simple(pref_width, pref_height, BILINEAR)
         return mod_img
+
+    def set_padding(self, img, padding):
+        width = img.get_width()
+        height = img.get_height()
+
+        if padding > 0:
+            padded = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, width + padding,
+                                          height + padding)
+            x = padded.get_width() / 2 - min(padded.get_width(), width) / 2
+            y = padded.get_height() / 2 - min(padded.get_height(), height) / 2
+
+            img.copy_area(0, 0, width, height, padded, math.floor(x), math.floor(y))
+
+            return padded.scale_simple(width, height, HYPER)
+        return img
 
     @staticmethod
     def data_is_file(data):
@@ -139,7 +213,7 @@ class PixmapManager:
 
     def load_file_from_path(self, path: str, scale):
         img_format, width, height = GdkPixbuf.Pixbuf.get_file_info(path)
-        pixbuf: GdkPixbuf.Pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, width * scale, height * scale, True)
+        pixbuf: GdkPixbuf.Pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(path, width * scale, height * scale)
         return pixbuf
 
     def pixmap_path(self, name):
@@ -161,42 +235,3 @@ def load_css(data: str):
         Gdk.Screen.get_default(),
         css_prov,
         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
-
-def main():
-    pixel = PixmapManager("")
-    pic = "/storage/emulated/0/Download/IMG_8417.jpeg"
-    pixel.get_pixbuf(pic, 0.5, 400,
-                     300, padding=10)
-    exit(0)
-    builder = Gtk.Builder()
-    builder.add_from_file("../ui/results_window.ui")
-    flowbox = builder.get_object("results_flow")
-    results = builder.get_object("results_window")
-    css = '''
-        .image_fill{
-            background-size: cover;
-            border-radius: 10%;
-            background-origin: content-box;
-            background: url(''' + " " + '''") no-repeat;
-        }
-    '''
-    load_css(css)
-
-    pixbuf = pixel.get_pixbuf("/storage/emulated/0/Download/IMG_8425.jpeg")
-    window = Gtk.Window()
-    result_item = builder.get_object("result_item")
-    image: Gtk.Image = builder.get_object("result_image")
-    # image.set_from_pixbuf(pixbuf)
-    frame = Gtk.Frame()
-    frame.set_size_request(400, 400)
-    text = builder.get_object("result_text")
-    layout = Gtk.Layout()
-    text.set_text("Test")
-    flowbox.add(frame)
-
-    window.add(results)
-    frame.get_style_context().add_class("image_fill")
-    window.show_all()
-    window.connect("destroy", Gtk.main_quit)
-    Gtk.main()

@@ -140,8 +140,9 @@ class RemotePage:
         self.remote = remote
 
     def get_page_content(self):
-        for info in self.func():
-            yield self.remote.result_to_cls(info)
+        raise NotImplementedError(
+            "You must implement a get page content"
+        )
 
 
 class RemoteFile:

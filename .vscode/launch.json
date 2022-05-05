@@ -5,12 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true
+          "name": "Run Inkstocks",
+          "type": "python",
+          "request": "launch",
+          "program": "inkstock_main.py",
+          "console": "integratedTerminal",
+          "justMyCode": true
         }
     ]
 }

@@ -67,12 +67,8 @@ class BasicWindow(ChildWindow):
         if not self.results:
             source = self.source
             self.results = self.gapp.load_window("results_window", pixmaps=self.get_pixmaps(), source=source)
-            self.on_results_created(self.results)
-        self.results.handler.add_page(page)
         self.show_window(self.results)
-
-    def on_results_created(self, results):
-        pass
+        self.results.handler.add_page(page)
 
     def clear_pages(self):
         if self.results:

@@ -141,7 +141,6 @@ class CheckBoxOption(Option):
 
 
 class SearchField(Option):
-    watch = StopWatch()
 
     def __init__(self, name, change_reciever, label):
         super().__init__(name, None, "options_search", change_reciever)
@@ -152,10 +151,8 @@ class SearchField(Option):
     def search_changed(self, search_entry):
         query = search_entry.get_text()
         self.value = query
-        if query and (len(query) > 2):
-            self.watch.start_or_reset(3, lambda: self.receiver.on_change(self))
-        else:
-            self.watch.cancel()
+        if query and (len(query) > 1):
+            self.receiver.on_change(self)
 
 
 class OptionType(enum.Enum):

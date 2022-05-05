@@ -6,9 +6,17 @@ window flowbox > flowboxchild {
 }
 
 window flowbox > flowboxchild:selected {
-    background-color: #c0f0f5;
-    opacity: 0.5;
+    background-color: #29A3AF;
     color: black;
+    padding: 5px;
+}
+
+.view_image{
+    border-style: solid;
+    background: #29A3AF;
+    color: white;
+    border: none;
+    border-radius: 0px;
 }
 
 .options {

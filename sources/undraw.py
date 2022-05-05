@@ -22,12 +22,22 @@ class UndrawWindow(BasicWindow):
         super().__init__(gapp)
 
     def get_pixmaps(self):
-        return PixmapManager(CACHE_DIR, pref_width=300,
-                             pref_height=300, scale=1,
-                             grid_item_height=300,
-                             grid_item_width=300,
-                             padding=30,
-                             aspect_ratio=SIZE_ASPECT_GROW)
+        pix = PixmapManager(CACHE_DIR, pref_width=200,
+                            pref_height=200, scale=1,
+                            grid_item_height=250,
+                            grid_item_width=250,
+                            padding=20,
+                            aspect_ratio=SIZE_ASPECT_GROW)
+        pix.style = """.{id}{{
+            background-color: white;
+            background-size: contain;
+            border-radius: 10%;
+            background-repeat: no-repeat;
+            background-origin: content-box;
+            background-image: url("{url}");
+            }}
+        """
+        return pix
 
 
 class UndrawIllustration(RemoteFile):
@@ -65,7 +75,7 @@ class Undraw(RemoteSource):
     page_cls = UndrawPage
     is_default = False
     is_enabled = True
-    items_per_page = 10
+    items_per_page = 12
     reqUrl = "https://undraw.co/api/search"
     window_cls = UndrawWindow
 

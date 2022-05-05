@@ -168,6 +168,7 @@ class RemoteSource:
     items_per_page = 10
     window_cls = BasicWindow
     window: BasicWindow = None
+    selected_files = []
 
     sources = {}
 
@@ -197,6 +198,7 @@ class RemoteSource:
             "You must implement a get_page function for this remote source!"
         )
 
+    @asyncme.run_or_none
     def search(self, query, tags=[]):
         """
         Search for the given query and returns first page
@@ -209,14 +211,20 @@ class RemoteSource:
         self.window = window
         window_pane.set_position(0)
 
+    def file_selected(self, file: RemoteFile):
+        pass
+
+    def files_selection_changed(self, files):
+        self.selected_files = files
+
     def __del__(self):
         self.session.close()
 
     def to_local_file(self, url, name, headers=None):
         """Get a remote url and turn it into a local file"""
         filepath = os.path.join(self.cache_dir, name)
-        if os.path.exists(filepath):
-            return filepath
+        # if os.path.exists(filepath):
+        #     return filepath
 
         if not headers:
             headers = {"User-Agent": "Inkscape"}

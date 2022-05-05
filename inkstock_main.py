@@ -28,6 +28,7 @@ from sources.undraw import UndrawWindow
 from sources.pexels import PexelsWindow
 from sources.unsplash import UnsplashWindow
 from sources.pixabay import PixabayWindow
+from sources.material_icons import MaterialWindow
 
 
 class InkStockApp(GtkApp):
@@ -36,7 +37,7 @@ class InkStockApp(GtkApp):
     app_name = "InkStock"
     ui_dir = "ui"
     windows = [InkStocksWindow,
-               ResultsWindow, BasicWindow, UndrawWindow, PexelsWindow, UnsplashWindow, PixabayWindow]
+               ResultsWindow, BasicWindow, UndrawWindow, PexelsWindow, UnsplashWindow, PixabayWindow, MaterialWindow]
 
     def __init__(self, start_loop=False, start_gui=True, **kwargs):
         self.ext = kwargs.setdefault("ext", None)
