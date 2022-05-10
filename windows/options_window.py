@@ -1,7 +1,9 @@
 import enum
+from base64 import b16encode
 from typing import Set
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 
+from inkex.gui import asyncme
 from utils.stop_watch import StopWatch
 
 
@@ -16,6 +18,7 @@ class OptionsWindow(ChangeReciever):
         self.builder = Gtk.Builder()
         self.options = {}
         self.widgets = {}
+        self.__attached_widgets = []
         self.receiver = change_receiver
         self.builder.add_objects_from_file(self.ui_file, ["options_listbox", "options_separator"])
         self.window: Gtk.ListBox = self.builder.get_object("options_listbox")
@@ -23,7 +26,7 @@ class OptionsWindow(ChangeReciever):
         self.separator = self.builder.get_object("options_separator")
         self.window.show_all()
 
-    def set_option(self, name, values, type, label=None):
+    def set_option(self, name, values, type, label=None, show_separator=True, attach=True):
         if type == OptionType.CHECKBOX:
             widget = CheckBoxOption(name, values, self, label)
         elif type == OptionType.COLOR:
@@ -32,18 +35,27 @@ class OptionsWindow(ChangeReciever):
             widget = DropDownOption(name, values, self, label)
         elif type == OptionType.TEXTFIELD:
             widget = TextFieldOption(name, values, self, label)
+        elif type == OptionType.LINK:
+            widget = Link(name, values, self, label)
+        elif type == OptionType.BUTTON:
+            widget = Button(name, values, self, label)
+        elif type == OptionType.TEXTVIEW:
+            widget = TextView(name, values, self)
         elif type == OptionType.SEARCH:
             widget = SearchField(name, self, label)
         else:
             raise ValueError("Widget type not available")
 
-        builder = Gtk.Builder()
-        builder.add_objects_from_file(self.ui_file, ["options_separator"])
-        separator: Gtk.Separator = builder.get_object("options_separator")
-        separator.set_hexpand(False)
         widget.view.set_hexpand(False)
-        self.window.add(widget.view)
-        self.window.add(separator)
+        if attach:
+            self.window.add(widget.view)
+            self.__attached_widgets.append(widget)
+        if show_separator and attach:
+            builder = Gtk.Builder()
+            builder.add_objects_from_file(self.ui_file, ["options_separator"])
+            separator: Gtk.Separator = builder.get_object("options_separator")
+            separator.set_hexpand(False)
+            self.window.add(separator)
         self.widgets[name] = widget
         self.options[name] = widget.value
         self.receiver.on_change(self.options)
@@ -55,6 +67,20 @@ class OptionsWindow(ChangeReciever):
     def disable_option(self, name):
         if name in self.widgets:
             self.widgets[name].set_sensitive(False)
+
+    def remove_option(self, name):
+        if name in self.widgets:
+            widget = self.widgets[name]
+            if widget in self.__attached_widgets:
+                asyncme.mainloop_only(self.window.remove)(widget.view)
+                self.__attached_widgets.remove(widget)
+
+    def attach_option(self, name):
+        if name in self.widgets:
+            widget = self.widgets[name]
+            if widget not in self.__attached_widgets:
+                asyncme.mainloop_only(self.window.add)(widget.view)
+                self.__attached_widgets.append(widget)
 
     def get_options(self):
         return self.options
@@ -98,9 +124,16 @@ class ColorOption(Option):
         super().__init__(name, values, "options_color", change_receiver)
         self.label = self.widget("options_color_label")
         self.label.set_text(label)
+        self.color_btn: Gtk.ColorButton = self.widget("options_color_btn")
+        rgba = self.color_btn.get_rgba()
+        if values and rgba.parse(values):
+            self.color_btn.set_rgba(rgba)
 
     def color_set(self, button: Gtk.ColorButton):
-        self.value = button.get_color().to_string()
+        rgba = button.get_rgba()
+        color_rgba = tuple(map(lambda x: round(x * 255), (rgba.red, rgba.green, rgba.blue, rgba.alpha)))
+        color_hex = '#{:02x}{:02x}{:02x}{:02x}'.format(*color_rgba)
+        self.value = color_hex
         self.receiver.on_change(self)
 
 
@@ -155,5 +188,30 @@ class SearchField(Option):
             self.receiver.on_change(self)
 
 
+class TextView(Option):
+    def __init__(self, name, values, change_reciever):
+        super().__init__(name, values, "options_textview", change_reciever)
+        self.view.set_markup(values)
+        self.value = values
+
+
+class Link(Option):
+    def __init__(self, name, values, change_receiver, label):
+        super().__init__(name, values, "options_link", change_receiver)
+        self.view.set_label(label)
+        self.view.set_uri(values)
+        self.value = values
+
+
+class Button(Option):
+    def __init__(self, name, values, change_receiver, label):
+        super().__init__(name, values, "options_button", change_receiver)
+        self.view.set_label(label)
+        self.fn = values
+
+    def on_click(self, btn):
+        self.fn(self.name)
+
+
 class OptionType(enum.Enum):
-    DROPDOWN, TEXTFIELD, COLOR, CHECKBOX, SEARCH = range(5)
+    DROPDOWN, TEXTFIELD, COLOR, CHECKBOX, SEARCH, TEXTVIEW, LINK, BUTTON = range(8)

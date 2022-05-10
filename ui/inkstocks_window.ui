@@ -347,7 +347,34 @@
                                         <property name="image">import</property>
                                     </object>
                                     <packing>
+                                        <property name="left-attach">3</property>
+                                        <property name="top-attach">0</property>
+                                    </packing>
+                                </child>
+                                <child>
+                                    <object class="GtkLabel" id="no_of_selected">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="xpad">20</property>
+                                        <property name="label" translatable="yes">0 items selected</property>
+                                    </object>
+                                    <packing>
                                         <property name="left-attach">2</property>
+                                        <property name="top-attach">0</property>
+                                    </packing>
+                                </child>
+                                <child>
+                                    <object class="GtkProgressBar" id="download_progress">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="margin-top">10</property>
+                                        <property name="margin-bottom">10</property>
+                                        <property name="hexpand">True</property>
+                                        <property name="text" translatable="yes">fetching files ...</property>
+                                        <property name="show-text">True</property>
+                                    </object>
+                                    <packing>
+                                        <property name="left-attach">1</property>
                                         <property name="top-attach">0</property>
                                     </packing>
                                 </child>
@@ -361,21 +388,6 @@
                                         <property name="left-attach">0</property>
                                         <property name="top-attach">0</property>
                                     </packing>
-                                </child>
-                                <child>
-                                    <object class="GtkLabel" id="no_of_selected">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="xpad">20</property>
-                                        <property name="label" translatable="yes">0 items selected</property>
-                                    </object>
-                                    <packing>
-                                        <property name="left-attach">1</property>
-                                        <property name="top-attach">0</property>
-                                    </packing>
-                                </child>
-                                <child>
-                                    <placeholder/>
                                 </child>
                             </object>
                             <packing>

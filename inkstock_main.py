@@ -12,6 +12,8 @@ from inkex.elements import (
 )
 
 from inkex.styles import Style
+from remote import RemoteSource
+from utils.constants import SOURCES
 
 gi.require_version("Gtk", "3.0")
 
@@ -21,26 +23,23 @@ class Handler:
         self.window = window
 
 
-from windows.basic_window import BasicWindow
-from windows.results_window import ResultsWindow
 from windows.inkstocks_window import InkStocksWindow
-from sources.undraw import UndrawWindow
-from sources.pexels import PexelsWindow
-from sources.unsplash import UnsplashWindow
-from sources.pixabay import PixabayWindow
-from sources.material_icons import MaterialWindow
-
+from windows.results_window import ResultsWindow
 
 class InkStockApp(GtkApp):
     """Base App
     Add all windows to windows for it to be recognised"""
     app_name = "InkStock"
     ui_dir = "ui"
-    windows = [InkStocksWindow,
-               ResultsWindow, BasicWindow, UndrawWindow, PexelsWindow, UnsplashWindow, PixabayWindow, MaterialWindow]
+    windows = []
 
     def __init__(self, start_loop=False, start_gui=True, **kwargs):
         self.ext = kwargs.setdefault("ext", None)
+        RemoteSource.load(os.path.join(os.path.dirname(__file__), 'sources'))
+        self.windows = RemoteSource.windows
+        self.windows.insert(0, InkStocksWindow)
+        self.windows.insert(0, ResultsWindow)
+
         super().__init__(start_loop, start_gui, **kwargs)
 
 

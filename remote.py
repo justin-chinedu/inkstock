@@ -117,7 +117,7 @@ class RemoteFile:
             if field not in info:
                 raise ValueError(f"Field {field} not provided in RemoteFile package")
         self.info = info
-        self.id = hash(str(info))
+        self.id = str(hash(str(info)))
         self.remote: RemoteSource = remote
 
     @property
@@ -166,25 +166,30 @@ class RemoteSource:
     is_default = False
     is_enabled = True
     items_per_page = 10
+    options_window_width = 300
     window_cls = BasicWindow
     window: BasicWindow = None
     selected_files = []
+    pix_manager = None
 
     sources = {}
-
+    windows = []
     def __init_subclass__(cls):
         if cls != RemoteSource:
             cls.sources[cls.__name__] = cls
+            cls.windows.append(cls.window_cls)
 
-    def __init__(self, cache_dir) -> None:
+    def __init__(self, cache_dir, dm) -> None:
         self.current_page = 0
+        self.dm = dm
+        self.options_window = None
         self.session = requests.session()
         self.cache_dir = cache_dir
         self.session.mount(
             "https://",
             CacheControlAdapter(
                 cache=FileCache(cache_dir),
-                heuristic=ExpiresAfter(days=5),
+                heuristic=ExpiresAfter(days=1),
             ),
         )
 
@@ -209,13 +214,13 @@ class RemoteSource:
 
     def on_window_attached(self, window: BasicWindow, window_pane: Gtk.Paned):
         self.window = window
-        window_pane.set_position(0)
 
     def file_selected(self, file: RemoteFile):
         pass
 
     def files_selection_changed(self, files):
         self.selected_files = files
+        self.dm.add_files(self.__class__.name, files)
 
     def __del__(self):
         self.session.close()

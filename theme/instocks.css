@@ -7,7 +7,6 @@ window flowbox > flowboxchild {
 
 window flowbox > flowboxchild:selected {
     background-color: #29A3AF;
-    color: black;
     padding: 5px;
 }
 
@@ -19,9 +18,25 @@ window flowbox > flowboxchild:selected {
     border-radius: 0px;
 }
 
+.result_text{
+    background-color: white;
+    padding: 2px;
+    border: none;
+    border-radius: 0% 0% 10% 10%;
+}
+
 .options {
     background-color: transparent;
   }
+
+.options_button *{
+     background-color: #3F3F3F;
+     color: white;
+     margin-top: 15px;
+     padding: 10px;
+     text-decoration-color: white;
+     text-decoration-line: none;
+ }
 
  .transparent {
      background-color: transparent;

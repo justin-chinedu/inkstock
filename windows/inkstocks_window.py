@@ -3,10 +3,11 @@ from inkex.gui import asyncme
 from inkex.gui.app import GtkApp
 
 from utils.constants import CACHE_DIR, SOURCES, WINDOWS
+from utils.download_manager import DownloadManager
+from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
 from utils.stop_watch import StopWatch
 
 """TODO: Override pixelmapmanger's load_from_name_method"""
-from inkex.gui.pixmap import PadFilter, PixmapManager, SizeFilter
 from inkex.gui.window import Window
 from remote import RemoteSource
 
@@ -45,6 +46,8 @@ class InkStocksWindow(Window):
         self.source_desc = self.widget('source_desc')
         self.source_icon = self.widget('source_icon')
         self.search_box = self.widget('search_box')
+        self.progress: Gtk.ProgressBar = self.widget('download_progress')
+        self.no_of_selected = self.widget('no_of_selected')
         self.page_stack: Gtk.Stack = self.widget('page_stack')
         self.import_files_btn.connect('clicked', self.import_files)
         self.sources_lists: Gtk.ListBox = self.widget('sources_lists')
@@ -53,14 +56,11 @@ class InkStocksWindow(Window):
         self.w_tree.connect_signals(self.signal_handler)
 
         RemoteSource.load(SOURCES)
-        RemoteSource.load(WINDOWS)
 
-        self.sources_pixmanager = PixmapManager(SOURCES, filters=[
-            SizeFilter(size=80),
-            PadFilter(size=(0, 60))
-        ])
-
-        self.sources = [source(CACHE_DIR) for source in RemoteSource.sources.values()]
+        self.sources_pixmanager = PixmapManager(CACHE_DIR, scale=3, pref_width=150,
+                                                pref_height=150, padding=40, aspect_ratio=SIZE_ASPECT_GROW, )
+        self.dm = DownloadManager(self)
+        self.sources = [source(CACHE_DIR, self.dm) for source in RemoteSource.sources.values()]
         self.sources_lists.show_all()
         self.sources_results = []
         self.sources_windows = []
@@ -70,10 +70,12 @@ class InkStocksWindow(Window):
         for index, source in enumerate(self.sources):
             if not source.is_enabled:
                 continue
+            icon = self.sources_pixmanager.get_pixbuf_for_icon(source.icon)
             list_box = ListBoxRowWithData(
-                self.sources_pixmanager.get(source.icon), source.name, source.desc, index, source)
+                icon, source.name, source.desc, index, source)
             list_box.show_all()
             self.sources_lists.add(list_box)
+
             if source.is_default:
                 default_source_index = index
 
@@ -95,12 +97,13 @@ class InkStocksWindow(Window):
 
     def add_window(self, window_cls, source):
         """if window has not been attached to source, load window"""
-        if not source.window:
-            w = self.gapp.load_window(window_cls.name, source=source)
-            self.sources_windows.append(w)
+        if not source.window and window_cls not in self.sources_windows:
+            w = self.gapp.load_window(window_cls.name, source=source, main_window=self)
+            self.sources_windows.append(window_cls)
 
     def show_window(self, window, source):
         """Adds window to the page stack"""
+
         if not self.page_stack.get_child_by_name(source.name):
             self.page_stack.add_named(window.window, source.name)
         child = self.page_stack.get_child_by_name(source.name)
@@ -134,9 +137,9 @@ class MainHandler:
         self.window.source_title.set_text(row.name)
         self.window.source_desc.set_markup(row.desc)
         source = self.get_selected_source()
-        icon = self.window.sources_pixmanager.get(
-            source.icon)
+
         self.window.source_icon.clear()
-        self.window.source_icon.set_from_pixbuf(icon)
+        self.window.source_icon.set_from_pixbuf(row.icon)
+
         self.window.add_window(source.window_cls, source)
         self.window.show_window(source.window, source)

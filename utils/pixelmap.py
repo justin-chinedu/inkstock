@@ -5,6 +5,7 @@ from concurrent.futures import Future
 import gi
 
 from inkex.gui import asyncme
+from tasks.task import Task
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, GdkPixbuf, Gdk
@@ -19,12 +20,19 @@ SIZE_ASPECT_CROP = 2
 class PixmapManager:
     pixmap_dir = None
     # Default styling for items, All styles must follow this template
+    # could be overridden when providing manager by sources
     style = """.{id}{{
             background-size: cover;
             background-origin: content-box;
+            border-radius: 5%;
             background: url("{url}") no-repeat;
             }}
+            
+            window flowbox > flowboxchild {{
+            border-radius: 5%;
+            }}
         """
+    tasks: list[Task] = []
 
     def __init__(self, cache_dir, scale=0.7, pref_width=200, pref_height=200,
                  padding=0, aspect_ratio=SIZE_ASPECT_CROP, grid_item_width=400, grid_item_height=300):
@@ -45,32 +53,38 @@ class PixmapManager:
 
         self.scale = scale
         self.cache_dir = cache_dir
+        self.skip_cache = False
         self.cache = {}
+
+    def get_pixbuf_for_icon(self, icon):
+        pixbuf = self.__get_pixbuf(icon, self.pref_width, self.pref_height, self.padding, self.scale,
+                                   SIZE_ASPECT_GROW, return_pixbuf=True, skip_cache=True)
+        return pixbuf
 
     def get_pixbuf_from_file_for_previews(self, file, selected_file, callback):
         def run(*args):
-            thumbnail = file.thumbnail
+            thumbnail = file[0].thumbnail
             if thumbnail:
                 pixbuf_path = self.__get_pixbuf(thumbnail, self.preview_item_width, self.preview_item_height,
                                                 self.preview_padding, self.preview_scaling, self.preview_aspect_ratio,
-                                                skip_cache=True)
+                                                skip_cache=False, thumbnail=True)
                 callback(pixbuf_path, *args)
             else:
                 raise ValueError("Thumbnail returned from source was null")
 
         asyncme.run_or_none(run)(file, selected_file)
 
-    def get_pixbuf_from_file(self, file, callback):
+    def get_pixbuf_from_file(self, file, callback, *args):
         def run(*args):
             thumbnail = file.thumbnail
             if thumbnail:
                 pixbuf_path = self.__get_pixbuf(thumbnail, self.pref_width, self.pref_height, self.padding, self.scale,
-                                                SIZE_ASPECT_CROP)
+                                                SIZE_ASPECT_CROP, skip_cache=self.skip_cache)
                 callback(pixbuf_path, *args)
             else:
                 raise ValueError("Thumbnail returned from source was null")
 
-        asyncme.run_or_none(run)(file)
+        asyncme.run_or_none(run)(file, *args)
 
     def get_pixbuf_for_preview(self, file, callback):
         def run(*args):
@@ -86,9 +100,13 @@ class PixmapManager:
         asyncme.run_or_none(run)(file)
 
     def __get_pixbuf(self, name: str, pref_width, pref_height, padding, scale, aspect_ratio, return_pixbuf=False,
-                     skip_cache=False):
-        key = name[-30:]  # bytes or string
-        pixmap_path = self.pixmap_path(name)
+                     skip_cache=False, thumbnail=False):
+
+        if thumbnail:
+            key = name[-30:] + "thumb"  # bytes or string
+        else:
+            key = name[-30:]
+        pixmap_path = self.get_pixmap_path(name)
 
         if key not in self.cache or skip_cache:
             if self.data_is_file(name):
@@ -97,7 +115,10 @@ class PixmapManager:
                     img = self.set_aspect(img, pref_width, pref_height, aspect_ratio)
                 if self.enable_padding:
                     img = self.set_padding(img, padding)
-                img.savev(pixmap_path, "png")
+                if thumbnail:
+                    pixmap_path = pixmap_path + "thumb"
+                if not return_pixbuf:
+                    img.savev(pixmap_path, "png")
                 if not skip_cache:
                     self.cache[key] = img
                 if return_pixbuf:
@@ -107,6 +128,8 @@ class PixmapManager:
         else:
             if return_pixbuf:
                 return self.cache[key]
+            elif thumbnail:
+                return pixmap_path + "thumb"
             else:
                 return pixmap_path
 
@@ -212,11 +235,16 @@ class PixmapManager:
         return isinstance(data, str) and "<svg" not in data
 
     def load_file_from_path(self, path: str, scale):
+        for task in self.tasks:
+            if task.is_active:
+                path = task.do_task(path)
+
         img_format, width, height = GdkPixbuf.Pixbuf.get_file_info(path)
         pixbuf: GdkPixbuf.Pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(path, width * scale, height * scale)
+
         return pixbuf
 
-    def pixmap_path(self, name):
+    def get_pixmap_path(self, name):
         """Returns the pixmap path based on stored location"""
         for filename in (
                 name,
@@ -226,7 +254,6 @@ class PixmapManager:
             if os.path.exists(filename) and os.path.isfile(filename):
                 return name
         return os.path.join(self.cache_dir, name)
-
 
 def load_css(data: str):
     css_prov = Gtk.CssProvider()

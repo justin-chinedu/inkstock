@@ -16,7 +16,7 @@
             <object class="GtkStack" id="result_image">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="interpolate-size">True</property>
+                <property name="halign">center</property>
                 <child>
                     <placeholder/>
                 </child>
@@ -38,6 +38,9 @@
                 <property name="ellipsize">end</property>
                 <property name="max-width-chars">8</property>
                 <property name="lines">1</property>
+                <style>
+                    <class name="result_text"/>
+                </style>
             </object>
             <packing>
                 <property name="expand">False</property>
@@ -192,12 +195,128 @@
                                 <property name="can-focus">False</property>
                                 <property name="orientation">vertical</property>
                                 <child>
-                                    <object class="GtkImage" id="results_single_image">
+                                    <!-- n-columns=3 n-rows=3 -->
+                                    <object class="GtkGrid">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
-                                        <property name="hexpand">True</property>
-                                        <property name="vexpand">True</property>
-                                        <property name="stock">gtk-missing-image</property>
+                                        <child>
+                                            <object class="GtkImage" id="results_single_image">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">False</property>
+                                                <property name="hexpand">True</property>
+                                                <property name="vexpand">True</property>
+                                                <property name="stock">gtk-missing-image</property>
+                                            </object>
+                                            <packing>
+                                                <property name="left-attach">1</property>
+                                                <property name="top-attach">0</property>
+                                                <property name="height">3</property>
+                                            </packing>
+                                        </child>
+                                        <child>
+                                            <object class="GtkButton" id="results_single_back">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">True</property>
+                                                <property name="receives-default">True</property>
+                                                <property name="halign">start</property>
+                                                <property name="valign">start</property>
+                                                <property name="margin-start">20</property>
+                                                <property name="margin-end">20</property>
+                                                <property name="margin-top">20</property>
+                                                <property name="relief">half</property>
+                                                <child>
+                                                    <object class="GtkImage">
+                                                        <property name="visible">True</property>
+                                                        <property name="can-focus">False</property>
+                                                        <property name="pixbuf">../icons/cancel.svg</property>
+                                                    </object>
+                                                </child>
+                                            </object>
+                                            <packing>
+                                                <property name="left-attach">0</property>
+                                                <property name="top-attach">0</property>
+                                            </packing>
+                                        </child>
+                                        <child>
+                                            <object class="GtkButton" id="results_single_back1">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">True</property>
+                                                <property name="receives-default">True</property>
+                                                <property name="halign">start</property>
+                                                <property name="valign">start</property>
+                                                <property name="margin-left">20</property>
+                                                <property name="margin-right">20</property>
+                                                <property name="margin-start">20</property>
+                                                <property name="margin-end">20</property>
+                                                <property name="margin-top">20</property>
+                                                <property name="relief">none</property>
+                                                <signal name="clicked" handler="previous_btn_clicked" swapped="no"/>
+                                                <child>
+                                                    <object class="GtkImage">
+                                                        <property name="visible">True</property>
+                                                        <property name="can-focus">False</property>
+                                                        <property name="pixbuf">../icons/arrow_right.svg</property>
+                                                    </object>
+                                                </child>
+                                            </object>
+                                            <packing>
+                                                <property name="left-attach">0</property>
+                                                <property name="top-attach">1</property>
+                                            </packing>
+                                        </child>
+                                        <child>
+                                            <object class="GtkButton" id="results_single_back2">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">True</property>
+                                                <property name="receives-default">True</property>
+                                                <property name="halign">end</property>
+                                                <property name="valign">start</property>
+                                                <property name="margin-left">20</property>
+                                                <property name="margin-right">20</property>
+                                                <property name="margin-start">20</property>
+                                                <property name="margin-end">20</property>
+                                                <property name="margin-top">20</property>
+                                                <property name="relief">none</property>
+                                                <signal name="clicked" handler="next_btn_clicked" swapped="no"/>
+                                                <child>
+                                                    <object class="GtkImage">
+                                                        <property name="visible">True</property>
+                                                        <property name="can-focus">False</property>
+                                                        <property name="pixbuf">../icons/arrow_left.svg</property>
+                                                    </object>
+                                                </child>
+                                            </object>
+                                            <packing>
+                                                <property name="left-attach">2</property>
+                                                <property name="top-attach">1</property>
+                                            </packing>
+                                        </child>
+                                        <child>
+                                            <object class="GtkButton" id="results_single_back3">
+                                                <property name="label">Select</property>
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">True</property>
+                                                <property name="receives-default">True</property>
+                                                <property name="halign">start</property>
+                                                <property name="valign">start</property>
+                                                <property name="margin-left">20</property>
+                                                <property name="margin-right">20</property>
+                                                <property name="margin-start">20</property>
+                                                <property name="margin-end">20</property>
+                                                <property name="margin-top">20</property>
+                                                <property name="relief">half</property>
+                                            </object>
+                                            <packing>
+                                                <property name="left-attach">2</property>
+                                                <property name="top-attach">0</property>
+                                            </packing>
+                                        </child>
+                                        <child>
+                                            <placeholder/>
+                                        </child>
+                                        <child>
+                                            <placeholder/>
+                                        </child>
                                     </object>
                                     <packing>
                                         <property name="expand">True</property>
@@ -209,8 +328,13 @@
                                     <object class="GtkLabel" id="results_single_text">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
+                                        <property name="xpad">30</property>
                                         <property name="ypad">15</property>
                                         <property name="label" translatable="yes">label</property>
+                                        <property name="wrap">True</property>
+                                        <property name="ellipsize">end</property>
+                                        <property name="max-width-chars">20</property>
+                                        <property name="lines">4</property>
                                     </object>
                                     <packing>
                                         <property name="expand">False</property>
@@ -230,7 +354,7 @@
             </packing>
         </child>
         <child>
-            <object class="GtkScrolledWindow">
+            <object class="GtkScrolledWindow" id="results_single_scroll_previews">
                 <property name="height-request">100</property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
@@ -242,7 +366,8 @@
                         <child>
                             <object class="GtkFlowBox" id="results_single_list">
                                 <property name="visible">True</property>
-                                <property name="can-focus">False</property>
+                                <property name="can-focus">True</property>
+                                <property name="has-focus">True</property>
                                 <property name="valign">end</property>
                                 <property name="homogeneous">True</property>
                                 <property name="column-spacing">10</property>

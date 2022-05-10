@@ -1,19 +1,62 @@
-
-from ntpath import join
-from remote import RemoteSource, RemoteFile, RemotePage
-from genericpath import exists
-import json
 import sys
+
+from inkex.gui import asyncme
+from utils.constants import CACHE_DIR
+from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW, SIZE_ASPECT_CROP
+from windows.basic_window import BasicWindow
+from windows.options_window import OptionsWindow, OptionType
+
 sys.path.insert(
     1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
 
+from remote import RemoteFile, RemotePage, RemoteSource
+import json
+from os.path import exists
+
+
+class FAWindow(BasicWindow):
+    name = "fa_window"
+
+    def __init__(self, gapp):
+        self.name = "basic_window"
+        super().__init__(gapp)
+
+    def get_pixmaps(self):
+        pix = PixmapManager(CACHE_DIR, scale=1,
+                            grid_item_height=200,
+                            grid_item_width=200,
+                            padding=350)
+
+        pix.enable_aspect = False
+        pix.preview_scaling = 7
+        pix.preview_padding = 30
+        pix.preview_aspect_ratio = SIZE_ASPECT_GROW
+        pix.preview_item_height = 100
+        pix.preview_item_width = 100
+        pix.style = """.{id}{{
+            background-color: white;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-origin: content-box;
+            background-image: url("{url}");
+            }}
+        """
+        return pix
+
 
 class FAIcon(RemoteFile):
-    thumbnail = property(lambda self: self.remote.to_local_file(
-        self.info["thumbnail"], self.info["name"] + '.svg'))
+    def __init__(self, remote, info):
+        super().__init__(remote, info)
+        self.name = f"{self.info['name'][:7]}-fontawesome"
 
-    def get_file(self): return self.remote.to_local_file(
-        self.info["file"], self.info["name"] + '.svg')
+    @property
+    def thumbnail(self):
+        name = self.name + ".svg"
+        return self.remote.to_local_file(self.info["thumbnail"], name)
+
+    def get_file(self):
+        name = self.name + "file.svg"
+        return self.remote.to_local_file(self.info["file"], name)
 
 
 class FAPage(RemotePage):
@@ -52,10 +95,22 @@ class FASource(RemoteSource):
     is_default = False
     is_enabled = True
     is_optimized = False
-    items_per_page = 10
+    options_window_width = 350
+    items_per_page = 16
+    window_cls = FAWindow
 
-    def __init__(self, cache_dir):
-        super().__init__(cache_dir)
+    def __init__(self, cache_dir, dm):
+        super().__init__(cache_dir, dm)
+
+        self.query = ""
+        self.results = []
+        self.options = {}
+        self.options_window = OptionsWindow(self)
+        self.options_window.set_option("query", None, OptionType.SEARCH, "Search Material Icons")
+        self.options_window.set_option(
+            "color", None, OptionType.COLOR, "Choose icon color")
+
+        # -----------------------
         json = 'json/font-awesome.json'
         json_exists = exists(json)
         opt_json = 'json/font-awesome-optimized.json'
@@ -71,19 +126,34 @@ class FASource(RemoteSource):
                 "Cannot find any font awesome json files in json folder")
 
     def get_page(self, page_no: int):
-        self.current_page = page_no
         results = self.results[page_no *
-                               self.items_per_page: self.items_per_page*(page_no + 1)]
-        if not results:
-            return None
-        return FAPage(self, page_no, results)
+                               self.items_per_page: self.items_per_page * (page_no + 1)]
+        if results:
+            self.current_page = page_no
+            page = FAPage(self, page_no, results)
+            self.window.show_spinner()
+            self.window.add_page(page)
 
     def search(self, query):
+        self.results = []
         query = query.lower().replace(' ', '_')
+        self.query = query
+        self.window.clear_pages()
+        self.window.show_spinner()
         self.results = [(key, value) for key, value in self.icon_map.items()
                         if key.startswith(query)]
-        return self.get_page(0)
+        self.get_page(0)
 
+    def on_window_attached(self, window: BasicWindow, window_pane):
+        super().on_window_attached(window, window_pane)
+        # self.query = "a"
+        # asyncme.run_or_none(self.search)("a")
+
+    def on_change(self, options):
+        self.query = options["query"]
+        self.options = options
+        if self.window and self.query:
+            self.search(self.query)
 
 def read_map_file(path):
     with open(path, mode='r') as f:

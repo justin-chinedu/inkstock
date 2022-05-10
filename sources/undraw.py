@@ -2,6 +2,7 @@ import json
 import sys
 
 from inkex.gui import asyncme
+from tasks.svg_color_replace import SvgColorReplace
 from utils.constants import CACHE_DIR
 from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
 
@@ -12,7 +13,7 @@ sys.path.insert(
     1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
 
 from remote import RemoteFile, RemotePage, RemoteSource
-
+from gi.repository import Gdk, Gtk
 
 class UndrawWindow(BasicWindow):
     name = "undraw_window"
@@ -22,22 +23,7 @@ class UndrawWindow(BasicWindow):
         super().__init__(gapp)
 
     def get_pixmaps(self):
-        pix = PixmapManager(CACHE_DIR, pref_width=200,
-                            pref_height=200, scale=1,
-                            grid_item_height=250,
-                            grid_item_width=250,
-                            padding=20,
-                            aspect_ratio=SIZE_ASPECT_GROW)
-        pix.style = """.{id}{{
-            background-color: white;
-            background-size: contain;
-            border-radius: 10%;
-            background-repeat: no-repeat;
-            background-origin: content-box;
-            background-image: url("{url}");
-            }}
-        """
-        return pix
+        return self.source.pix_manager
 
 
 class UndrawIllustration(RemoteFile):
@@ -79,15 +65,35 @@ class Undraw(RemoteSource):
     reqUrl = "https://undraw.co/api/search"
     window_cls = UndrawWindow
 
-    def __init__(self, cache_dir):
-        super().__init__(cache_dir)
+    def __init__(self, cache_dir, dm):
+        super().__init__(cache_dir, dm)
         self.query = ""
+        self.pix_manager = self.setup_pixmanager()
         self.results = []
-        self.options = {}
+        self.options = {"dominant_color": None}
+        self.color_ext = SvgColorReplace()
         self.options_window = OptionsWindow(self)
         self.options_window.set_option("query", None, OptionType.SEARCH, "Search unDraw")
         self.options_window.set_option(
-            "color", None, OptionType.COLOR, "Choose theme color")
+            "dominant_color", None, OptionType.COLOR, "Choose dominant color")
+
+    def setup_pixmanager(self):
+        pix = PixmapManager(CACHE_DIR, pref_width=200,
+                            pref_height=200, scale=1,
+                            grid_item_height=250,
+                            grid_item_width=250,
+                            padding=20,
+                            aspect_ratio=SIZE_ASPECT_GROW)
+        pix.style = """.{id}{{
+            background-color: white;
+            background-size: contain;
+            border-radius: 10%;
+            background-repeat: no-repeat;
+            background-origin: content-box;
+            background-image: url("{url}");
+            }}
+        """
+        return pix
 
     def get_page(self, page_no: int):
         self.current_page = page_no
@@ -126,12 +132,37 @@ class Undraw(RemoteSource):
 
     def on_window_attached(self, window: BasicWindow, window_pane):
         super().on_window_attached(window, window_pane)
-        window_pane.set_position(350)
-        self.query = ""
-        self.window.show_options_window(self.options_window.window)
+        self.query = "acc"
+        asyncme.run_or_none(self.search)(self.query)
+        # self.window.show_options_window(self.options_window.window, self)
 
     def on_change(self, options):
+        prev_q = str(self.query)
+        self.query = options["query"]
         self.options = options
-        if self.query != options["query"]:
-            self.query = options["query"]
+        if self.window and self.query and prev_q != self.query:
             self.search(self.query)
+            return
+        color = None
+        if "dominant_color" in self.options:
+            color = self.options["dominant_color"]
+        if self.window and color:
+            self.change_items_color(color)
+
+    def change_items_color(self, color):
+        items = self.window.results.get_displayed_data(only_selected=True)
+        old_color = "#6C63FF"
+        self.color_ext.is_active = True
+        self.color_ext.new_colors_fill[old_color] = color
+        # self.pix_manager.tasks.append(self.color_ext)
+        # self.pix_manager.skip_cache = True
+        # for item in items:
+        #     self.pix_manager.get_pixbuf_from_file(item.data, self.update_item, item)
+        #
+
+    def update_item(self, path, file, item):
+        style_ctx = item.style_ctx
+        prov = item.style_prov
+        css = prov.to_string()
+        style_ctx.remove_provider_for_screen(Gdk.Screen.get_default(), prov)
+        style_ctx.add_provider_for_screen(Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)

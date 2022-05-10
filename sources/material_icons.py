@@ -1,4 +1,5 @@
 import sys
+from time import sleep
 
 from numpy import sort
 
@@ -49,7 +50,7 @@ class MaterialWindow(BasicWindow):
 class MaterialIcon(RemoteFile):
     def __init__(self, remote, info):
         super().__init__(remote, info)
-        self.name = f"{self.info['name'][:7]}-{str(self.id)}-material"
+        self.name = f"{self.info['name'][:7]}-material"
 
     @property
     def thumbnail(self):
@@ -96,31 +97,34 @@ class MaterialIconsPage(RemotePage):
                 "file": url,
             }
 
-            files.append(MaterialIcon(self.remote_source, info))
-        return files
+            icon = MaterialIcon(self.remote_source, info)
+            yield icon
+            # files.append(icon)
+        # return files
 
 
 class MaterialIconsSource(RemoteSource):
     name = 'Material Icons'
-    desc = "Material design icons is the official icon set from Google. They can be browsed at https://fonts.google.com/icons. The icons are designed under the material design guidelines."
+    desc = "Material design icons is the official icon set from Google. They can be browsed at <a href='https://fonts.google.com/icons'>Material Icons</a>. The icons are designed under the material design guidelines."
     icon = "icons/material-icons.png"
     file_cls = MaterialIcon
     page_cls = MaterialIconsPage
     is_default = True
     is_enabled = True
     is_optimized = False
+    options_window_width = 350
     items_per_page = 16
     window_cls = MaterialWindow
 
-    def __init__(self, cache_dir):
-        super().__init__(cache_dir)
+    def __init__(self, cache_dir, dm):
+        super().__init__(cache_dir, dm)
         self.query = ""
         self.results = []
         self.options = {}
         self.options_window = OptionsWindow(self)
         self.options_window.set_option("query", None, OptionType.SEARCH, "Search Material Icons")
         self.options_window.set_option(
-            "color", None, OptionType.COLOR, "Choose theme color")
+            "color", None, OptionType.COLOR, "Choose icon color")
 
         # -----------------------
         json_exists = exists('json/material-icons.json')
@@ -136,6 +140,7 @@ class MaterialIconsSource(RemoteSource):
 
     def get_page(self, page_no: int):
         self.current_page = page_no
+        self.window.show_spinner()
         results = self.results[page_no * self.items_per_page: self.items_per_page * (page_no + 1)]
         if results:
             page = MaterialIconsPage(self, page_no, results)
@@ -160,15 +165,13 @@ class MaterialIconsSource(RemoteSource):
 
     def on_window_attached(self, window: BasicWindow, window_pane):
         super().on_window_attached(window, window_pane)
-        window_pane.set_position(350)
         self.query = "a"
-        self.window.show_options_window(self.options_window.window)
-        self.search("a")
+        asyncme.run_or_none(self.search)("a")
 
     def on_change(self, options):
+        self.query = options["query"]
         self.options = options
-        if self.query != options["query"]:
-            self.query = options["query"]
+        if self.window and self.query:
             self.search(self.query)
 
 
