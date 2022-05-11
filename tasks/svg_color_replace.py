@@ -8,16 +8,16 @@ from tasks.task import Task
 
 class SvgColorReplace(Task):
     def __init__(self):
-        self.new_colors_fill = {}
-        self.new_colors_stroke = {}
+        self.new_fill_colors = {}
+        self.new_stroke_colors = {}
 
     def do_task(self, filepath) -> str:
         if self.is_active:
             svg, colors_fill, colors_stroke = self.extract_color(filepath)
-            for old_color, new_color in self.new_colors_fill.items():
+            for old_color, new_color in self.new_fill_colors.items():
                 if old_color in colors_fill.keys():
                     self.change_color_of_elements(new_color, colors_fill[old_color], "fill")
-            for old_color, new_color in self.new_colors_stroke.items():
+            for old_color, new_color in self.new_stroke_colors.items():
                 if old_color in colors_stroke.keys():
                     self.change_color_of_elements(new_color, colors_stroke[old_color], "stroke")
             # name = os.path.basename(filepath) + "_color_extracted.svg"
@@ -43,4 +43,5 @@ class SvgColorReplace(Task):
 
     def change_color_of_elements(self, new_color, elements, attrib):
         for element in elements:
-            element.attrib[attrib] = new_color
+            if new_color:
+                element.attrib[attrib] = new_color

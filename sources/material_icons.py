@@ -50,10 +50,9 @@ class MaterialWindow(BasicWindow):
 class MaterialIcon(RemoteFile):
     def __init__(self, remote, info):
         super().__init__(remote, info)
-        self.name = f"{self.info['name'][:7]}-material"
+        self.name = f"{self.info['name']}-material"
 
-    @property
-    def thumbnail(self):
+    def get_thumbnail(self):
         name = self.name + ".svg"
         return self.remote.to_local_file(self.info["thumbnail"], name)
 
@@ -68,7 +67,6 @@ class MaterialIconsPage(RemotePage):
         self.remote_source = remote_source
 
     def get_page_content(self):
-        files = []
         for url in  self.results:
         
             if url.split('/')[9].replace('materialicons', '') == '':
@@ -99,8 +97,6 @@ class MaterialIconsPage(RemotePage):
 
             icon = MaterialIcon(self.remote_source, info)
             yield icon
-            # files.append(icon)
-        # return files
 
 
 class MaterialIconsSource(RemoteSource):

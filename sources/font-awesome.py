@@ -41,16 +41,17 @@ class FAWindow(BasicWindow):
             background-image: url("{url}");
             }}
         """
+        pix.single_preview_scale = 0.3
+        pix.preview_scaling = 0.3
         return pix
 
 
 class FAIcon(RemoteFile):
     def __init__(self, remote, info):
         super().__init__(remote, info)
-        self.name = f"{self.info['name'][:7]}-fontawesome"
+        self.name = f"{self.info['name']}-fontawesome"
 
-    @property
-    def thumbnail(self):
+    def get_thumbnail(self):
         name = self.name + ".svg"
         return self.remote.to_local_file(self.info["thumbnail"], name)
 
@@ -67,7 +68,7 @@ class FAPage(RemotePage):
 
     def get_page_content(self):
         for key, value in self.results:
-            name =  "-".join(key.split("-")[:-1])
+            name = "-".join(key.split("-")[:-1])
             category = key.split("-")[-1]
             url = f"https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.x/svgs/{category}/{name}.svg"
             info = {
@@ -154,6 +155,7 @@ class FASource(RemoteSource):
         self.options = options
         if self.window and self.query:
             self.search(self.query)
+
 
 def read_map_file(path):
     with open(path, mode='r') as f:

@@ -1,3 +1,4 @@
+import os
 from typing import Set
 
 import gi
@@ -6,6 +7,7 @@ from inkex.gui.window import ChildWindow
 from utils.constants import CACHE_DIR
 from remote import RemoteFile, RemotePage, RemoteSource
 from utils.pixelmap import PixmapManager, load_css
+from windows.view_change_listener import ViewChangeListener
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GObject
@@ -32,6 +34,19 @@ class ResultsWindow(ChildWindow):
         child = page_stack.get_child_by_name(name)
         if page_stack.get_visible_child() != child:
             page_stack.set_visible_child(child)
+            if isinstance(self.source, ViewChangeListener):
+                self.source.on_view_changed(child)
+
+    def refresh_window(self):
+        if self.is_multi_view():
+            self.multiview.clear()
+            items = self.handler.page_items
+            for item in items:
+                self.multiview.add_item(item)
+        else:
+            item = self.singleview.selected_child.data
+            self.singleview.clear()
+            self.singleview.show_previews(self.handler.page_items, item)
 
     def init(self, parent=None, **kwargs):
         self.source = kwargs["source"]
@@ -46,12 +61,21 @@ class ResultsWindow(ChildWindow):
         self.multiview = MultiItemView(self, pixmaps)
         self.singleview = SingleItemView(self, pixmaps)
 
-    def get_displayed_data(self, only_selected=True):
-        page_stack: Gtk.Stack = self.window
-        if page_stack.get_visible_child_name().startswith("multiview"):
+    def is_multi_view(self) -> bool:
+        if self.window.get_visible_child_name().startswith("multiview"):
+            return True
+        else:
+            return False
+
+    def get_multi_view_displayed_data(self, only_selected=True):
+        if self.is_multi_view():
             if only_selected:
                 return self.multiview.flow_box.get_selected_children()
             return self.multiview.flow_box.get_children()
+
+    def get_single_view_displayed_data(self, only_selected=True):
+        if not self.is_multi_view():
+            return self.singleview.selected_child, self.singleview.list.get_selected_children()
 
 
 class FlowBoxChildWithData(Gtk.FlowBoxChild):
@@ -113,7 +137,7 @@ class SingleItemView:
         self.children.clear()
 
         for index, remote_file in enumerate(remote_files):
-            self.pixmaps.get_pixbuf_from_file_for_previews((remote_file, index), selected_file, self.callback)
+            self.pixmaps.get_pixbuf_for_thumbails((remote_file, index), selected_file, self.callback)
 
     @asyncme.mainloop_only
     def add_children(self):
@@ -133,25 +157,31 @@ class SingleItemView:
         # self.selected_child.grab_focus()
 
     def show_file(self, file):
-        self.pixmaps.get_pixbuf_for_preview(file, self.__set_image)
+        self.pixmaps.get_pixbuf_for_single_preview(file, self.__set_image)
 
     @asyncme.mainloop_only
-    def __set_image(self, pixbuf):
+    def __set_image(self, pixbuf, pic_path):
         self.image.set_from_pixbuf(pixbuf)
+        # asyncme.run_or_none(os.remove)(pic_path)
 
     @asyncme.mainloop_only
-    def callback(self, pix_path, remote_file, selected_file):
+    def callback(self, pic_path, remote_file, selected_file):
         item_id = "id_single" + str(remote_file[0].id)
         css = self.pixmaps.style
-        css = css.format(id=item_id, url=pix_path)
+        css = css.format(id=item_id, url=pic_path)
 
         child = FlowBoxChildWithData(remote_file[0])
         child.set_size_request(self.pixmaps.preview_item_width, self.pixmaps.preview_item_height)
         child.set_hexpand(False)
         child.set_vexpand(False)
         child.label.hide()
-        child.get_style_context().add_class(item_id)
-        load_css(css)
+        child.style_ctx.add_class(item_id)
+        css_prov = Gtk.CssProvider()
+        css_prov.load_from_data(bytes(css, "utf8"))
+        child.style_prov = css_prov
+        child.style_ctx.add_provider_for_screen(Gdk.Screen.get_default(), css_prov,
+                                                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        # asyncme.run_or_none(os.remove)(pic_path)
         self.children[remote_file[1]] = child
         self.index += 1
 
@@ -188,7 +218,7 @@ class MultiItemView:
 
     @asyncme.mainloop_only
     def add_item(self, remote_file: RemoteFile):
-        self.pixmaps.get_pixbuf_from_file(remote_file, self.callback)
+        self.pixmaps.get_pixbuf_for_multi_preview(remote_file, self.callback)
 
     @asyncme.mainloop_only
     def callback(self, pic_path, remote_file):
@@ -215,7 +245,7 @@ class MultiItemView:
         child.style_ctx.add_provider_for_screen(Gdk.Screen.get_default(), css_prov,
                                                 Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.flow_box.add(child)
-
+        # asyncme.run_or_none(os.remove)(pic_path)
         # if True:
         #     self.builder.add_objects_from_file(
         #         'ui/results_window.ui', ("result_item", ""))
@@ -277,16 +307,15 @@ class ResultsHandler:
 
         selected_items = box.get_selected_children()
         self.selected_resources.clear()
-
+        selected_item = None
         for item in selected_items:
             self.selected_resources.append(item.data)
             self.activated_items.add(item)
             item.button.show()
             item.label.hide()
             if len(selected_items) == 1:
-                self.source.file_selected(item.data)
+                selected_item = item.data
 
-        self.source.files_selection_changed(self.selected_resources)
         items_to_remove = []
         for item in self.activated_items:
             if item not in selected_items:
@@ -295,6 +324,10 @@ class ResultsHandler:
                 items_to_remove.append(item)
         for item in items_to_remove:
             self.activated_items.remove(item)
+
+        self.source.files_selection_changed(self.selected_resources)
+        if selected_item:
+            self.source.file_selected(selected_item)
 
     def add_page(self, page):
         self.pages.append(page)
@@ -353,9 +386,11 @@ class ResultsHandler:
 
     def next_btn_clicked(self, btn):
         children = self.window.singleview.list.get_children()
-        selected = self.window.singleview.list.get_selected_children()[0]
+        selected_children = self.window.singleview.list.get_selected_children()
+        if not selected_children: return  # if children not yet loaded( due to size ) we just return
+        first_selected = selected_children[0]
         for index, child in enumerate(children):
-            if child == selected and not index >= len(children) - 1:
+            if child == first_selected and not index >= len(children) - 1:
                 self.window.singleview.list.select_child(children[index + 1])
                 break
 

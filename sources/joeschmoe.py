@@ -7,6 +7,8 @@ from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
 
 from windows.basic_window import BasicWindow
 from windows.options_window import OptionsWindow, OptionType, ChangeReciever
+from windows.view_change_listener import ViewChangeListener
+from tasks.svg_color_replace import SvgColorReplace
 
 sys.path.insert(
     1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
@@ -40,6 +42,7 @@ class JoeschmoeWindow(BasicWindow):
             border-radius: 5%;
             }}
         """
+        self.source.pix_manager = pix
         return pix
 
 
@@ -49,8 +52,7 @@ class JoeschmoeIllustration(RemoteFile):
         super().__init__(remote, info)
         self.name = f"{self.info['name'][:7]}-joeschmoe"
 
-    @property
-    def thumbnail(self):
+    def get_thumbnail(self):
         name = self.name + ".svg"
         return self.remote.to_local_file(self.info["thumbnail"], name)
 
@@ -75,7 +77,7 @@ class JoeschmoePage(RemotePage):
         yield JoeschmoeIllustration(self.remote_source, info)
 
 
-class JoeschmoeSource(RemoteSource):
+class JoeschmoeSource(RemoteSource, ViewChangeListener):
     name = "Joeschmoe"
     desc = "Joe Schmoes are colorful characters illustrated by Jon&amp;Jess that can be used as profile picture placeholders for live websites or design mock ups. "
     icon = "icons/joeschmoe.png"
@@ -89,15 +91,21 @@ class JoeschmoeSource(RemoteSource):
 
     def __init__(self, cache_dir, dm):
         super().__init__(cache_dir, dm)
+        self.stroke_colors = {}
+        self.fill_colors = {}
         self.query = ""
         self.results = []
         self.options = {}
+
+        self.pix_manager = None
+        self.color_ext = SvgColorReplace()
         self.options_window = OptionsWindow(self)
         self.options_window.set_option("seed", None, OptionType.SEARCH, "Type name")
         self.options_window.set_option(
             "gender", ["all", "female", "male"], OptionType.DROPDOWN, "Choose gender")
         self.options_window.set_option("no_of_avatars", 1, OptionType.TEXTFIELD, "No of avatars")
         self.options_window.set_option("random", self.random_clicked, OptionType.BUTTON, "Generate random avatars")
+        self.color_options = []
 
     def get_page(self, page_no: int, req_url=None):
         if page_no == 0:
@@ -128,7 +136,89 @@ class JoeschmoeSource(RemoteSource):
         super().on_window_attached(window, window_pane)
 
     def on_change(self, options):
-        self.query = options["seed"]
         self.options = options
-        if self.window and self.query:
+        if self.window and self.query != options["seed"]:
             self.search(self.query)
+
+        if not self.window:
+            return
+
+        is_multi_view = self.window.results.is_multi_view()
+
+        if is_multi_view:
+            items = self.window.results.get_multi_view_displayed_data(only_selected=True)
+        else:
+            items = [self.window.results.get_single_view_displayed_data()[0]]
+        for item in items:
+            color_replace = None
+            # Avoiding duplicate color replace tasks
+            for task in item.data.tasks:
+                if isinstance(task, SvgColorReplace):
+                    color_replace = task
+            if not color_replace:
+                color_replace = SvgColorReplace()
+                item.data.tasks.append(color_replace)
+            color_replace.is_active = True
+            color_replace.new_fill_colors = {}
+            color_replace.new_stroke_colors = {}
+            for fill, value in [(key.removeprefix("fill_"), value) for key, value in self.options.items() if
+                                key.startswith("fill_")]:
+                if value:
+                    color_replace.new_fill_colors[fill] = value
+            for stroke, value in [(key.removeprefix("stroke_"), value) for key, value in self.options.items() if
+                                  key.startswith("stroke_")]:
+                if value:
+                    color_replace.new_stroke_colors[stroke] = value
+
+            # thumbnail = self.pix_manager.get_pixbuf_for_task(item.data)
+            # self.update_item(thumbnail, item)
+        self.window.results.refresh_window()
+
+    @asyncme.mainloop_only
+    def file_selected(self, file: RemoteFile):
+        for task in file.tasks:
+            if isinstance(task, SvgColorReplace):
+                return
+        self.show_svg_colors(file)
+
+    def show_svg_colors(self, file):
+        file = file.get_thumbnail()
+        _, fill_colors, stroke_colors = self.color_ext.extract_color(file)
+        self.fill_colors = fill_colors
+        self.stroke_colors = stroke_colors
+        if fill_colors:
+            if "set_fill" in self.options_window.options:
+                self.options_window.attach_option("set_fill")
+            else:
+                self.options_window.set_option("set_fill", "Set fill colors", OptionType.TEXTVIEW, show_separator=True)
+
+        for index, fill in enumerate(fill_colors.keys()):
+            # Reusing existing option widgets instead of creating a new one
+            if not len(self.color_options) >= index:
+                self.color_options[index].view.set_color(fill)
+                continue
+            option = self.options_window.set_option("fill_" + fill, fill, OptionType.COLOR, f"Color {index + 1}",
+                                                    show_separator=False)
+            self.color_options.append(option)
+
+        if stroke_colors:
+            if "set_stroke" in self.options_window.options:
+                self.options_window.attach_option("set_stroke")
+            else:
+                self.options_window.set_option("set_stroke", "Set stroke colors", OptionType.TEXTVIEW,
+                                               show_separator=True)
+
+        for index, stroke in enumerate(stroke_colors.keys()):
+            # Reusing existing option widgets instead of creating a new one
+            if not len(self.color_options) >= (index + len(fill_colors.keys())):
+                self.color_options[index + len(fill_colors.keys())].view.set_color(stroke)
+                continue
+            option = self.options_window.set_option("stroke_" + stroke, stroke, OptionType.COLOR, f"Color {index + 1}",
+                                                    show_separator=False)
+            self.color_options.append(option)
+
+    def on_view_changed(self, view):
+        if self.window.results.is_multi_view():
+            pass
+        else:
+            pass

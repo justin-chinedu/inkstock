@@ -10,6 +10,7 @@ from cachecontrol.heuristics import ExpiresAfter
 from gi.repository import Gtk
 
 from inkex.gui import asyncme
+from tasks.task import Task
 from windows.basic_window import BasicWindow
 
 LICENSE_ICONS = os.path.join(os.path.dirname(__file__), 'licenses')
@@ -109,7 +110,7 @@ LICENSES = {
 
 
 class RemoteFile:
-    thumbnail = property(lambda self: self.remote.to_local_file(self.info["thumbnail"]))
+    get_thumbnail = lambda self: self.remote.to_local_file(self.info["thumbnail"])
     get_file = lambda self: self.remote.to_local_file(self.info["file"])
 
     def __init__(self, remote, info):
@@ -119,6 +120,7 @@ class RemoteFile:
         self.info = info
         self.id = str(hash(str(info)))
         self.remote: RemoteSource = remote
+        self.tasks: list[Task] = []
 
     @property
     def string(self):
@@ -267,3 +269,12 @@ class RemoteSource:
             for child in os.listdir(name):
                 if not child.startswith("_") and child.endswith(".py"):
                     cls.load(os.path.join(name, child))
+
+    @asyncme.mainloop_only
+    def update_item(self, pic_path, item):
+        css = self.pix_manager.style
+        css = css.format(id=item.id, url=pic_path)
+        item.style_prov.load_from_data(bytes(css, "utf8"))
+        # Fixme: Deleting item immediately here, makes it not appear
+        # Wait for some signal from gtk before deleting
+        # asyncme.run_or_none(os.remove)(pic_path)

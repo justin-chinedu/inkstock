@@ -16,9 +16,9 @@ class OptionsWindow(ChangeReciever):
 
     def __init__(self, change_receiver):
         self.builder = Gtk.Builder()
+        self.options_values = {}
         self.options = {}
-        self.widgets = {}
-        self.__attached_widgets = []
+        self.__attached_options = []
         self.receiver = change_receiver
         self.builder.add_objects_from_file(self.ui_file, ["options_listbox", "options_separator"])
         self.window: Gtk.ListBox = self.builder.get_object("options_listbox")
@@ -28,62 +28,66 @@ class OptionsWindow(ChangeReciever):
 
     def set_option(self, name, values, type, label=None, show_separator=True, attach=True):
         if type == OptionType.CHECKBOX:
-            widget = CheckBoxOption(name, values, self, label)
+            option = CheckBoxOption(name, values, self, label)
         elif type == OptionType.COLOR:
-            widget = ColorOption(name, values, self, label)
+            option = ColorOption(name, values, self, label)
         elif type == OptionType.DROPDOWN:
-            widget = DropDownOption(name, values, self, label)
+            option = DropDownOption(name, values, self, label)
         elif type == OptionType.TEXTFIELD:
-            widget = TextFieldOption(name, values, self, label)
+            option = TextFieldOption(name, values, self, label)
         elif type == OptionType.LINK:
-            widget = Link(name, values, self, label)
+            option = Link(name, values, self, label)
         elif type == OptionType.BUTTON:
-            widget = Button(name, values, self, label)
+            option = Button(name, values, self, label)
         elif type == OptionType.TEXTVIEW:
-            widget = TextView(name, values, self)
+            option = TextView(name, values, self)
         elif type == OptionType.SEARCH:
-            widget = SearchField(name, self, label)
+            option = SearchField(name, self, label)
         else:
             raise ValueError("Widget type not available")
 
-        widget.view.set_hexpand(False)
+        option.view.set_hexpand(False)
         if attach:
-            self.window.add(widget.view)
-            self.__attached_widgets.append(widget)
+            self.window.add(option.view)
+            self.__attached_options.append(option)
         if show_separator and attach:
             builder = Gtk.Builder()
             builder.add_objects_from_file(self.ui_file, ["options_separator"])
             separator: Gtk.Separator = builder.get_object("options_separator")
             separator.set_hexpand(False)
             self.window.add(separator)
-        self.widgets[name] = widget
-        self.options[name] = widget.value
-        self.receiver.on_change(self.options)
+        self.options[name] = option
+        self.options_values[name] = option.value
+        return option
+        # self.receiver.on_change(self.options)
 
-    def on_change(self, widget):
-        self.options[widget.name] = widget.value
-        self.receiver.on_change(self.options)
+    def on_change(self, option):
+        self.options_values[option.name] = option.value
+        for option in self.options.values():
+            if option not in self.__attached_options:
+                self.options_values.pop(option.name)
+        self.receiver.on_change(self.options_values)
 
     def disable_option(self, name):
-        if name in self.widgets:
-            self.widgets[name].set_sensitive(False)
+        if name in self.options:
+            self.options[name].set_sensitive(False)
 
     def remove_option(self, name):
-        if name in self.widgets:
-            widget = self.widgets[name]
-            if widget in self.__attached_widgets:
-                asyncme.mainloop_only(self.window.remove)(widget.view)
-                self.__attached_widgets.remove(widget)
+        if name in self.options:
+            widget = self.options[name]
+            if widget in self.__attached_options:
+                asyncme.mainloop_only(self.window.remove)(widget.view.get_parent())
+                self.__attached_options.remove(widget)
 
     def attach_option(self, name):
-        if name in self.widgets:
-            widget = self.widgets[name]
-            if widget not in self.__attached_widgets:
+        if name in self.options:
+            widget = self.options[name]
+            if widget not in self.__attached_options:
                 asyncme.mainloop_only(self.window.add)(widget.view)
-                self.__attached_widgets.append(widget)
+                self.__attached_options.append(widget)
 
     def get_options(self):
-        return self.options
+        return self.options_values
 
 
 class Option:
@@ -120,13 +124,16 @@ class TextFieldOption(Option):
 
 
 class ColorOption(Option):
-    def __init__(self, name, values, change_receiver, label) -> None:
-        super().__init__(name, values, "options_color", change_receiver)
+    def __init__(self, name, value, change_receiver, label) -> None:
+        super().__init__(name, value, "options_color", change_receiver)
         self.label = self.widget("options_color_label")
         self.label.set_text(label)
         self.color_btn: Gtk.ColorButton = self.widget("options_color_btn")
+        self.set_color(value)
+
+    def set_color(self, value):
         rgba = self.color_btn.get_rgba()
-        if values and rgba.parse(values):
+        if value and rgba.parse(value):
             self.color_btn.set_rgba(rgba)
 
     def color_set(self, button: Gtk.ColorButton):

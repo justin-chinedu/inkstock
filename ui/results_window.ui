@@ -200,20 +200,6 @@
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
                                         <child>
-                                            <object class="GtkImage" id="results_single_image">
-                                                <property name="visible">True</property>
-                                                <property name="can-focus">False</property>
-                                                <property name="hexpand">True</property>
-                                                <property name="vexpand">True</property>
-                                                <property name="stock">gtk-missing-image</property>
-                                            </object>
-                                            <packing>
-                                                <property name="left-attach">1</property>
-                                                <property name="top-attach">0</property>
-                                                <property name="height">3</property>
-                                            </packing>
-                                        </child>
-                                        <child>
                                             <object class="GtkButton" id="results_single_back">
                                                 <property name="visible">True</property>
                                                 <property name="can-focus">True</property>
@@ -223,7 +209,7 @@
                                                 <property name="margin-start">20</property>
                                                 <property name="margin-end">20</property>
                                                 <property name="margin-top">20</property>
-                                                <property name="relief">half</property>
+                                                <property name="relief">none</property>
                                                 <child>
                                                     <object class="GtkImage">
                                                         <property name="visible">True</property>
@@ -309,6 +295,33 @@
                                             <packing>
                                                 <property name="left-attach">2</property>
                                                 <property name="top-attach">0</property>
+                                            </packing>
+                                        </child>
+                                        <child>
+                                            <object class="GtkScrolledWindow">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">True</property>
+                                                <property name="shadow-type">in</property>
+                                                <child>
+                                                    <object class="GtkViewport">
+                                                        <property name="visible">True</property>
+                                                        <property name="can-focus">False</property>
+                                                        <child>
+                                                            <object class="GtkImage" id="results_single_image">
+                                                                <property name="visible">True</property>
+                                                                <property name="can-focus">False</property>
+                                                                <property name="hexpand">True</property>
+                                                                <property name="vexpand">True</property>
+                                                                <property name="stock">gtk-missing-image</property>
+                                                            </object>
+                                                        </child>
+                                                    </object>
+                                                </child>
+                                            </object>
+                                            <packing>
+                                                <property name="left-attach">1</property>
+                                                <property name="top-attach">0</property>
+                                                <property name="height">3</property>
                                             </packing>
                                         </child>
                                         <child>

@@ -38,11 +38,11 @@ class DownloadManager:
             for data in r.iter_content(chunk_size=5000):
                 bytes_downloaded += len(data)
                 out.write(data)
-                self.progress(bytes_downloaded, total, name)
+                self.show_progress(bytes_downloaded, total, name)
             out.close()
 
     @asyncme.mainloop_only
-    def progress(self, bytes_downloaded, total, name):
+    def show_progress(self, bytes_downloaded, total, name):
         if total:
             percent = bytes_downloaded / total
             self.window.progress.set_text(f"Fetching {name}...")

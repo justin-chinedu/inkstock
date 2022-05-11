@@ -1,5 +1,7 @@
+import base64
 import math
 import os
+import re
 from concurrent.futures import Future
 
 import gi
@@ -25,7 +27,8 @@ class PixmapManager:
             background-size: cover;
             background-origin: content-box;
             border-radius: 5%;
-            background: url("{url}") no-repeat;
+            background-image: url("{url}");
+            background-repeat: no-repeat; 
             }}
             
             window flowbox > flowboxchild {{
@@ -52,55 +55,87 @@ class PixmapManager:
         self.preview_aspect_ratio = SIZE_ASPECT_CROP
 
         self.scale = scale
+        self.single_preview_scale = self.scale
         self.cache_dir = cache_dir
-        self.skip_cache = False
         self.cache = {}
 
     def get_pixbuf_for_icon(self, icon):
-        pixbuf = self.__get_pixbuf(icon, self.pref_width, self.pref_height, self.padding, self.scale,
-                                   SIZE_ASPECT_GROW, return_pixbuf=True, skip_cache=True)
+        pixbuf, path = self.get_pixbuf(icon, self.pref_width, self.pref_height, self.padding, self.scale,
+                                       SIZE_ASPECT_GROW, return_pixbuf=True, skip_cache=True)
         return pixbuf
 
-    def get_pixbuf_from_file_for_previews(self, file, selected_file, callback):
+    def get_pixbuf_for_thumbails(self, file, selected_file, callback):
         def run(*args):
-            thumbnail = file[0].thumbnail
+            thumbnail = file[0].get_thumbnail()
+            for task in file[0].tasks:
+                if task.is_active and thumbnail:
+                    thumbnail = task.do_task(thumbnail)
+
             if thumbnail:
-                pixbuf_path = self.__get_pixbuf(thumbnail, self.preview_item_width, self.preview_item_height,
-                                                self.preview_padding, self.preview_scaling, self.preview_aspect_ratio,
-                                                skip_cache=False, thumbnail=True)
+                pixbuf_path = self.get_pixbuf(thumbnail, self.preview_item_width, self.preview_item_height,
+                                              self.preview_padding, self.preview_scaling, self.preview_aspect_ratio,
+                                              skip_cache=False, thumbnail=True)
                 callback(pixbuf_path, *args)
             else:
                 raise ValueError("Thumbnail returned from source was null")
 
         asyncme.run_or_none(run)(file, selected_file)
 
-    def get_pixbuf_from_file(self, file, callback, *args):
+    def get_pixbuf_for_multi_preview(self, file, callback, *args):
         def run(*args):
-            thumbnail = file.thumbnail
+            thumbnail = file.get_thumbnail()
+            for task in file.tasks:
+                if task.is_active and thumbnail:
+                    thumbnail = task.do_task(thumbnail)
+
             if thumbnail:
-                pixbuf_path = self.__get_pixbuf(thumbnail, self.pref_width, self.pref_height, self.padding, self.scale,
-                                                SIZE_ASPECT_CROP, skip_cache=self.skip_cache)
+                pixbuf_path = self.get_pixbuf(thumbnail, self.pref_width, self.pref_height, self.padding, self.scale,
+                                              SIZE_ASPECT_CROP, skip_cache=False)
                 callback(pixbuf_path, *args)
             else:
                 raise ValueError("Thumbnail returned from source was null")
 
         asyncme.run_or_none(run)(file, *args)
 
-    def get_pixbuf_for_preview(self, file, callback):
-        def run(*args):
-            thumbnail = file.thumbnail
-            if thumbnail:
+    def get_pixbuf_for_task(self, file):
+        thumbnail = file.get_thumbnail()
+        for task in file.tasks:
+            if task.is_active and thumbnail:
+                thumbnail = task.do_task(thumbnail)
+        if thumbnail:
+            pixbuf_path = self.get_pixbuf(thumbnail, self.pref_width, self.pref_height, self.padding, self.scale,
+                                          SIZE_ASPECT_CROP, skip_cache=True)
+            return pixbuf_path
+        else:
+            raise ValueError("Thumbnail returned from source was null")
 
-                pixbuf = self.__get_pixbuf(thumbnail, self.pref_width, self.pref_height, self.padding, self.scale,
-                                           SIZE_ASPECT_GROW, return_pixbuf=True, skip_cache=True)
-                callback(pixbuf)
+    def get_pixbuf_for_single_preview(self, file, callback):
+        def run(*args):
+            thumbnail = file.get_thumbnail()
+            for task in file.tasks:
+                if task.is_active and thumbnail:
+                    thumbnail = task.do_task(thumbnail)
+
+            if thumbnail:
+                padding = self.enable_padding
+                self.enable_padding = False
+                aspect = self.enable_aspect
+                self.enable_aspect = False
+                pixbuf, path = self.get_pixbuf(thumbnail, self.pref_width, self.pref_height, self.padding,
+                                               self.single_preview_scale,
+                                               SIZE_ASPECT_GROW, return_pixbuf=True, skip_cache=True)
+                self.enable_padding = padding
+                self.enable_aspect = aspect
+                del padding
+                del aspect
+                callback(pixbuf, path)
             else:
                 raise ValueError("Thumbnail returned from source was null")
 
         asyncme.run_or_none(run)(file)
 
-    def __get_pixbuf(self, name: str, pref_width, pref_height, padding, scale, aspect_ratio, return_pixbuf=False,
-                     skip_cache=False, thumbnail=False):
+    def get_pixbuf(self, name: str, pref_width, pref_height, padding, scale, aspect_ratio, return_pixbuf=False,
+                   skip_cache=False, thumbnail=False):
 
         if thumbnail:
             key = name[-30:] + "thumb"  # bytes or string
@@ -108,7 +143,7 @@ class PixmapManager:
             key = name[-30:]
         pixmap_path = self.get_pixmap_path(name)
 
-        if key not in self.cache or skip_cache:
+        if key not in self.cache or skip_cache or True:
             if self.data_is_file(name):
                 img = self.load_file_from_path(pixmap_path, scale)
                 if self.enable_aspect:
@@ -116,20 +151,20 @@ class PixmapManager:
                 if self.enable_padding:
                     img = self.set_padding(img, padding)
                 if thumbnail:
-                    pixmap_path = pixmap_path + "thumb"
+                    pixmap_path = pixmap_path + ".thumb"
                 if not return_pixbuf:
                     img.savev(pixmap_path, "png")
                 if not skip_cache:
                     self.cache[key] = img
                 if return_pixbuf:
-                    return img
+                    return img, pixmap_path
                 else:
                     return pixmap_path
         else:
             if return_pixbuf:
-                return self.cache[key]
+                return self.cache[key], pixmap_path
             elif thumbnail:
-                return pixmap_path + "thumb"
+                return pixmap_path + ".thumb"
             else:
                 return pixmap_path
 
@@ -235,9 +270,6 @@ class PixmapManager:
         return isinstance(data, str) and "<svg" not in data
 
     def load_file_from_path(self, path: str, scale):
-        for task in self.tasks:
-            if task.is_active:
-                path = task.do_task(path)
 
         img_format, width, height = GdkPixbuf.Pixbuf.get_file_info(path)
         pixbuf: GdkPixbuf.Pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(path, width * scale, height * scale)

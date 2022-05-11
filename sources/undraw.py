@@ -13,7 +13,7 @@ sys.path.insert(
     1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
 
 from remote import RemoteFile, RemotePage, RemoteSource
-from gi.repository import Gdk, Gtk
+
 
 class UndrawWindow(BasicWindow):
     name = "undraw_window"
@@ -30,10 +30,9 @@ class UndrawIllustration(RemoteFile):
 
     def __init__(self, remote, info):
         super().__init__(remote, info)
-        self.name = f"{self.info['name'][:7]}-{str(self.id)}-undraw"
+        self.name = f"{self.info['name']}-undraw"
 
-    @property
-    def thumbnail(self):
+    def get_thumbnail(self):
         name = self.name + ".svg"
         return self.remote.to_local_file(self.info["thumbnail"], name)
 
@@ -87,12 +86,17 @@ class Undraw(RemoteSource):
         pix.style = """.{id}{{
             background-color: white;
             background-size: contain;
-            border-radius: 10%;
             background-repeat: no-repeat;
+            border-radius: 5%;
             background-origin: content-box;
             background-image: url("{url}");
             }}
+            
+            window flowbox > flowboxchild {{
+            border-radius: 5%;
+            }}
         """
+        pix.single_preview_scale = 0.7
         return pix
 
     def get_page(self, page_no: int):
@@ -137,32 +141,26 @@ class Undraw(RemoteSource):
         # self.window.show_options_window(self.options_window.window, self)
 
     def on_change(self, options):
-        prev_q = str(self.query)
-        self.query = options["query"]
+
         self.options = options
-        if self.window and self.query and prev_q != self.query:
+        if self.window and self.query and self.query != options["query"]:
+            self.query = options["query"]
             self.search(self.query)
             return
         color = None
         if "dominant_color" in self.options:
             color = self.options["dominant_color"]
         if self.window and color:
-            self.change_items_color(color)
+            items = self.window.results.get_multi_view_displayed_data(only_selected=True)
+            self.change_items_color(color, items)
 
-    def change_items_color(self, color):
-        items = self.window.results.get_displayed_data(only_selected=True)
-        old_color = "#6C63FF"
+    @asyncme.run_or_none
+    def change_items_color(self, color, items):
+        old_color = "#6c63ff"
         self.color_ext.is_active = True
-        self.color_ext.new_colors_fill[old_color] = color
-        # self.pix_manager.tasks.append(self.color_ext)
-        # self.pix_manager.skip_cache = True
-        # for item in items:
-        #     self.pix_manager.get_pixbuf_from_file(item.data, self.update_item, item)
-        #
-
-    def update_item(self, path, file, item):
-        style_ctx = item.style_ctx
-        prov = item.style_prov
-        css = prov.to_string()
-        style_ctx.remove_provider_for_screen(Gdk.Screen.get_default(), prov)
-        style_ctx.add_provider_for_screen(Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self.color_ext.new_fill_colors[old_color] = color
+        for item in items:
+            thumbnail = item.data.get_thumbnail()
+            thumbnail = self.color_ext.do_task(thumbnail)
+            thumbnail = self.pix_manager.get_pixbuf_for_task(thumbnail)
+            self.update_item(thumbnail, item)
