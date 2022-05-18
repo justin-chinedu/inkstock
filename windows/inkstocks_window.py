@@ -38,14 +38,11 @@ class InkStocksWindow(Window):
          @import url("theme/instocks.css");
         """
         self.load_css(css)
-        self.search_spinner = self.widget('search_spinner')
-        self.search_spinner.hide()
         self.import_files_btn: Gtk.Button = self.widget('import_files_btn')
         self.import_files_btn.set_sensitive(False)
         self.source_title = self.widget('source_title')
         self.source_desc = self.widget('source_desc')
         self.source_icon = self.widget('source_icon')
-        self.search_box = self.widget('search_box')
         self.progress: Gtk.ProgressBar = self.widget('download_progress')
         self.no_of_selected = self.widget('no_of_selected')
         self.page_stack: Gtk.Stack = self.widget('page_stack')
@@ -70,7 +67,7 @@ class InkStocksWindow(Window):
         for index, source in enumerate(self.sources):
             if not source.is_enabled:
                 continue
-            icon = self.sources_pixmanager.get_pixbuf_for_icon(source.icon)
+            icon = self.sources_pixmanager.get_pixbuf_for_type(source.icon, "icon", None)
             list_box = ListBoxRowWithData(
                 icon, source.name, source.desc, index, source)
             list_box.show_all()

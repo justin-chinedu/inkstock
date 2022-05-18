@@ -1,17 +1,16 @@
-import sys
-
-from inkex.gui import asyncme
-from utils.constants import CACHE_DIR
-from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW, SIZE_ASPECT_CROP
-from windows.basic_window import BasicWindow
-from windows.options_window import OptionsWindow, OptionType
-
-sys.path.insert(
-    1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
-
-from remote import RemoteFile, RemotePage, RemoteSource
 import json
 from os.path import exists
+
+from gi.repository import Gtk
+
+from inkex.gui import asyncme
+from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query
+from sources.svg_source import SvgSource, add_color_changes_to_items
+from tasks.svg_color_replace import SvgColorReplace
+from utils.constants import CACHE_DIR
+from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
+from windows.basic_window import BasicWindow
+from windows.options_window import OptionsWindow, OptionType, ColorOption
 
 
 class FAWindow(BasicWindow):
@@ -43,6 +42,7 @@ class FAWindow(BasicWindow):
         """
         pix.single_preview_scale = 0.3
         pix.preview_scaling = 0.3
+        self.source.pix_manager = pix
         return pix
 
 
@@ -65,6 +65,7 @@ class FAPage(RemotePage):
         super().__init__(remote_source, page_no)
         self.results = results
         self.remote_source = remote_source
+        self.default_color_task = None
 
     def get_page_content(self):
         for key, value in self.results:
@@ -84,12 +85,17 @@ class FAPage(RemotePage):
                 "file": url,
             }
 
-            yield FAIcon(self.remote_source, info)
+            fa_icon = FAIcon(self.remote_source, info)
+            if self.default_color_task:
+                fa_icon.tasks.append(self.default_color_task)
+
+            yield fa_icon
 
 
-class FASource(RemoteSource):
+class FASource(SvgSource):
     name = 'Font Awesome Icons'
-    desc = "Font Awesome is the Internet's icon library and toolkit, used by millions of designers, developers, and content creators."
+    desc = "Font Awesome is the Internet's icon library and toolkit, used by millions of designers, developers, " \
+           "and content creators. "
     icon = "icons/font-awesome.png"
     file_cls = FAIcon
     page_cls = FAPage
@@ -100,31 +106,7 @@ class FASource(RemoteSource):
     items_per_page = 16
     window_cls = FAWindow
 
-    def __init__(self, cache_dir, dm):
-        super().__init__(cache_dir, dm)
-
-        self.query = ""
-        self.results = []
-        self.options = {}
-        self.options_window = OptionsWindow(self)
-        self.options_window.set_option("query", None, OptionType.SEARCH, "Search Material Icons")
-        self.options_window.set_option(
-            "color", None, OptionType.COLOR, "Choose icon color")
-
-        # -----------------------
-        json = 'json/font-awesome.json'
-        json_exists = exists(json)
-        opt_json = 'json/font-awesome-optimized.json'
-        optimized_json_exists = exists(opt_json)
-        if optimized_json_exists:
-            self.opt_icon_map = read_map_file(
-                opt_json)
-            self.is_optimized = True
-        elif json_exists:
-            self.icon_map = read_map_file(json)
-        else:
-            raise FileNotFoundError(
-                "Cannot find any font awesome json files in json folder")
+    json_path = 'json/font-awesome.json'
 
     def get_page(self, page_no: int):
         results = self.results[page_no *
@@ -132,33 +114,14 @@ class FASource(RemoteSource):
         if results:
             self.current_page = page_no
             page = FAPage(self, page_no, results)
-            self.window.show_spinner()
+            page.default_color_task = self.default_color_task
             self.window.add_page(page)
 
     def search(self, query):
         self.results = []
-        query = query.lower().replace(' ', '_')
-        self.query = query
+        self.query = sanitize_query(query)
         self.window.clear_pages()
         self.window.show_spinner()
         self.results = [(key, value) for key, value in self.icon_map.items()
                         if key.startswith(query)]
         self.get_page(0)
-
-    def on_window_attached(self, window: BasicWindow, window_pane):
-        super().on_window_attached(window, window_pane)
-        # self.query = "a"
-        # asyncme.run_or_none(self.search)("a")
-
-    def on_change(self, options):
-        self.query = options["query"]
-        self.options = options
-        if self.window and self.query:
-            self.search(self.query)
-
-
-def read_map_file(path):
-    with open(path, mode='r') as f:
-        m = json.load(f)
-        f.close()
-    return m

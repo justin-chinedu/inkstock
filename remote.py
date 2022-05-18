@@ -1,13 +1,15 @@
 import importlib
+import inspect
 import logging
 import os
 import sys
+from abc import ABC
 
 import requests
 from cachecontrol import CacheControlAdapter
 from cachecontrol.caches.file_cache import FileCache
 from cachecontrol.heuristics import ExpiresAfter
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 
 from inkex.gui import asyncme
 from tasks.task import Task
@@ -118,9 +120,10 @@ class RemoteFile:
             if field not in info:
                 raise ValueError(f"Field {field} not provided in RemoteFile package")
         self.info = info
-        self.id = str(hash(str(info)))
+        self.id = hash(self.info["file"])
         self.remote: RemoteSource = remote
         self.tasks: list[Task] = []
+        self.show_name = False
 
     @property
     def string(self):
@@ -159,7 +162,7 @@ class RemotePage:
         )
 
 
-class RemoteSource:
+class RemoteSource(ABC):
     name = None
     desc = None
     icon = None
@@ -176,8 +179,9 @@ class RemoteSource:
 
     sources = {}
     windows = []
+
     def __init_subclass__(cls):
-        if cls != RemoteSource:
+        if not inspect.isabstract(cls):
             cls.sources[cls.__name__] = cls
             cls.windows.append(cls.window_cls)
 
@@ -197,16 +201,16 @@ class RemoteSource:
 
     def get_page(self, page_no: int):
         """
-        Returns page according to page_no 
+        Adds specified page to window according to page_no
         page_no is 0 based
-        Return None if no other page exists
+        Do Nothing if no other page exists
         """
         raise NotImplementedError(
             "You must implement a get_page function for this remote source!"
         )
 
     @asyncme.run_or_none
-    def search(self, query, tags=[]):
+    def search(self, query):
         """
         Search for the given query and returns first page
         """
@@ -227,12 +231,12 @@ class RemoteSource:
     def __del__(self):
         self.session.close()
 
-    def to_local_file(self, url, name, headers=None):
+    def to_local_file(self, url, name, headers=None, content=False):
         """Get a remote url and turn it into a local file"""
         filepath = os.path.join(self.cache_dir, name)
         # if os.path.exists(filepath):
         #     return filepath
-
+        remote = None
         if not headers:
             headers = {"User-Agent": "Inkscape"}
         try:
@@ -249,10 +253,13 @@ class RemoteSource:
             pass
 
         if remote and remote.status_code == 200:
-            with open(filepath, "wb") as fhl:
-                # If we don't have data, return None (instead of empty file)
-                if fhl.write(remote.content):
-                    return filepath
+            if content:
+                return remote.content
+            else:
+                with open(filepath, "wb") as fhl:
+                    # If we don't have data, return None (instead of empty file)
+                    if fhl.write(remote.content):
+                        return filepath
         return None
 
     @classmethod
@@ -275,6 +282,21 @@ class RemoteSource:
         css = self.pix_manager.style
         css = css.format(id=item.id, url=pic_path)
         item.style_prov.load_from_data(bytes(css, "utf8"))
+
+        # css_prov = Gtk.CssProvider()
+        # css_prov.load_from_data(bytes(css, "utf8"))
+        # item.style_ctx.remove_provider_for_screen(Gdk.Screen.get_default(), item.style_prov)
+        # item.style_ctx.add_provider_for_screen(Gdk.Screen.get_default(), css_prov,
+        #                                               Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        # item.style_prov = css_prov
+
         # Fixme: Deleting item immediately here, makes it not appear
         # Wait for some signal from gtk before deleting
         # asyncme.run_or_none(os.remove)(pic_path)
+
+    def fetch_and_update_multi_item(self, item):
+        pass
+
+
+def sanitize_query(query):
+    return query.lower().replace(' ', '_')

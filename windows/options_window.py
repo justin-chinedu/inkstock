@@ -23,7 +23,6 @@ class OptionsWindow(ChangeReciever):
         self.builder.add_objects_from_file(self.ui_file, ["options_listbox", "options_separator"])
         self.window: Gtk.ListBox = self.builder.get_object("options_listbox")
         self.window.set_hexpand(True)
-        self.separator = self.builder.get_object("options_separator")
         self.window.show_all()
 
     def set_option(self, name, values, type, label=None, show_separator=True, attach=True):
@@ -43,29 +42,42 @@ class OptionsWindow(ChangeReciever):
             option = TextView(name, values, self)
         elif type == OptionType.SEARCH:
             option = SearchField(name, self, label)
+        elif type == OptionType.GROUP:
+            option = Group(name, values, self, label)
+            if attach:
+                for value in values:
+                    self.__attached_options.append(value)
         else:
             raise ValueError("Widget type not available")
 
         option.view.set_hexpand(False)
-        if attach:
+        if attach and not show_separator:
             self.window.add(option.view)
             self.__attached_options.append(option)
         if show_separator and attach:
-            builder = Gtk.Builder()
-            builder.add_objects_from_file(self.ui_file, ["options_separator"])
-            separator: Gtk.Separator = builder.get_object("options_separator")
-            separator.set_hexpand(False)
+            self.window.add(option.view)
+            self.__attached_options.append(option)
+            separator = self.get_separator()
             self.window.add(separator)
+
         self.options[name] = option
         self.options_values[name] = option.value
         return option
         # self.receiver.on_change(self.options)
 
+    def get_separator(self):
+        builder = Gtk.Builder()
+        builder.add_objects_from_file(self.ui_file, ["options_separator"])
+        separator: Gtk.Separator = builder.get_object("options_separator")
+        separator.set_hexpand(False)
+        return separator
+
     def on_change(self, option):
         self.options_values[option.name] = option.value
         for option in self.options.values():
             if option not in self.__attached_options:
-                self.options_values.pop(option.name)
+                if option.name in self.options_values:
+                    self.options_values.pop(option.name)
         self.receiver.on_change(self.options_values)
 
     def disable_option(self, name):
@@ -74,17 +86,23 @@ class OptionsWindow(ChangeReciever):
 
     def remove_option(self, name):
         if name in self.options:
-            widget = self.options[name]
-            if widget in self.__attached_options:
-                asyncme.mainloop_only(self.window.remove)(widget.view.get_parent())
-                self.__attached_options.remove(widget)
+            option = self.options[name]
+            if option in self.__attached_options:
+                asyncme.mainloop_only(self.window.remove)(option.view.get_parent())
+                if isinstance(option, Group):
+                    for value in option.values:
+                        self.__attached_options.remove(value)
+                self.__attached_options.remove(option)
 
     def attach_option(self, name):
         if name in self.options:
-            widget = self.options[name]
-            if widget not in self.__attached_options:
-                asyncme.mainloop_only(self.window.add)(widget.view)
-                self.__attached_options.append(widget)
+            option = self.options[name]
+            if option not in self.__attached_options:
+                asyncme.mainloop_only(self.window.add)(option.view)
+                if isinstance(option, Group):
+                    for value in option.values:
+                        self.__attached_options.append(value)
+                self.__attached_options.append(option)
 
     def get_options(self):
         return self.options_values
@@ -184,7 +202,8 @@ class SearchField(Option):
 
     def __init__(self, name, change_reciever, label):
         super().__init__(name, None, "options_search", change_reciever)
-        self.widget("options_searchentry").set_placeholder_text("Search")
+        self.entry: Gtk.SearchEntry = self.widget("options_searchentry")
+        self.entry.set_placeholder_text("Search")
         self.widget("options_search_label").set_text(label)
         self.value = ""
 
@@ -220,5 +239,25 @@ class Button(Option):
         self.fn(self.name)
 
 
+class Group(Option):
+    def __init__(self, name, options, change_receiver, label):
+        super().__init__(name, options, "options_group", change_receiver)
+        self.view.set_label(label)
+        self.group_list = self.widget("options_group_list")
+        for option in options:
+            self.add_option(option)
+
+    def add_option(self, option):
+        self.group_list.add(option.view)
+        self.group_list.add(self.get_separator())
+
+    def get_separator(self):
+        builder = Gtk.Builder()
+        builder.add_objects_from_file(self.ui_file, ["options_separator"])
+        separator: Gtk.Separator = builder.get_object("options_separator")
+        separator.set_hexpand(False)
+        return separator
+
+
 class OptionType(enum.Enum):
-    DROPDOWN, TEXTFIELD, COLOR, CHECKBOX, SEARCH, TEXTVIEW, LINK, BUTTON = range(8)
+    DROPDOWN, TEXTFIELD, COLOR, CHECKBOX, SEARCH, TEXTVIEW, LINK, BUTTON, GROUP = range(9)

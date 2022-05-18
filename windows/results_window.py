@@ -6,7 +6,7 @@ from inkex.gui import asyncme
 from inkex.gui.window import ChildWindow
 from utils.constants import CACHE_DIR
 from remote import RemoteFile, RemotePage, RemoteSource
-from utils.pixelmap import PixmapManager, load_css
+from utils.pixelmap import PixmapManager
 from windows.view_change_listener import ViewChangeListener
 
 gi.require_version("Gtk", "3.0")
@@ -18,6 +18,8 @@ class ResultsWindow(ChildWindow):
 
     def __init__(self, gapp):
         super().__init__(gapp)
+        self.singleview = None
+        self.multiview = None
         self.source = None
         self.handler: ResultsHandler = None
 
@@ -68,14 +70,10 @@ class ResultsWindow(ChildWindow):
             return False
 
     def get_multi_view_displayed_data(self, only_selected=True):
-        if self.is_multi_view():
-            if only_selected:
-                return self.multiview.flow_box.get_selected_children()
-            return self.multiview.flow_box.get_children()
-
-    def get_single_view_displayed_data(self, only_selected=True):
-        if not self.is_multi_view():
-            return self.singleview.selected_child, self.singleview.list.get_selected_children()
+        # if self.is_multi_view():
+        if only_selected:
+            return self.multiview.flow_box.get_selected_children()
+        return self.multiview.flow_box.get_children()
 
 
 class FlowBoxChildWithData(Gtk.FlowBoxChild):
@@ -116,7 +114,6 @@ class SingleItemView:
         self.builder.connect_signals(window.handler)
         self.single_view.show()
 
-
     @asyncme.mainloop_only
     def clear(self):
         def remove(child: Gtk.Widget):
@@ -137,7 +134,8 @@ class SingleItemView:
         self.children.clear()
 
         for index, remote_file in enumerate(remote_files):
-            self.pixmaps.get_pixbuf_for_thumbails((remote_file, index), selected_file, self.callback)
+            self.pixmaps.get_pixbuf_for_type(remote_file, "thumb", self.callback, index, remote_file, selected_file)
+            # self.pixmaps.get_pixbuf_for_thumbnails((remote_file, index), selected_file, self.callback)
 
     @asyncme.mainloop_only
     def add_children(self):
@@ -148,7 +146,7 @@ class SingleItemView:
             self.list.add(child)
             if child == self.selected_child:
                 selected_index = i
-
+        # FIXME: Doesn't work : scrolling to selected item
         adj = self.scroll.get_hadjustment()
         val = adj.get_upper() * ((selected_index + 1) / self.length)
         self.scroll.get_hadjustment().set_value(val)
@@ -157,20 +155,19 @@ class SingleItemView:
         # self.selected_child.grab_focus()
 
     def show_file(self, file):
-        self.pixmaps.get_pixbuf_for_single_preview(file, self.__set_image)
+        self.pixmaps.get_pixbuf_for_type(file, "single", self.set_image)
 
-    @asyncme.mainloop_only
-    def __set_image(self, pixbuf, pic_path):
+    def set_image(self, pixbuf):
         self.image.set_from_pixbuf(pixbuf)
-        # asyncme.run_or_none(os.remove)(pic_path)
 
     @asyncme.mainloop_only
-    def callback(self, pic_path, remote_file, selected_file):
-        item_id = "id_single" + str(remote_file[0].id)
+    def callback(self, pic_path, index, remote_file, selected_file):
+        item_id = "id_single" + str(remote_file.id)
         css = self.pixmaps.style
         css = css.format(id=item_id, url=pic_path)
 
-        child = FlowBoxChildWithData(remote_file[0])
+        child = FlowBoxChildWithData(remote_file)
+        child.id = item_id
         child.set_size_request(self.pixmaps.preview_item_width, self.pixmaps.preview_item_height)
         child.set_hexpand(False)
         child.set_vexpand(False)
@@ -182,10 +179,10 @@ class SingleItemView:
         child.style_ctx.add_provider_for_screen(Gdk.Screen.get_default(), css_prov,
                                                 Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         # asyncme.run_or_none(os.remove)(pic_path)
-        self.children[remote_file[1]] = child
+        self.children[index] = child
         self.index += 1
 
-        if remote_file[0].id == selected_file.id:
+        if remote_file.id == selected_file.id:
             self.selected_child = child
 
         if self.index == self.length:
@@ -197,6 +194,7 @@ class MultiItemView:
         self.builder = Gtk.Builder()
         self.pixmaps = pixmaps
         self.window = window
+        self.opened_item = None
         self.builder.add_objects_from_file(
             'ui/results_window.ui', ["results_multi_view"])
         self.multi_view = self.builder.get_object("results_multi_view")
@@ -211,14 +209,14 @@ class MultiItemView:
     def clear(self):
         def remove(child: Gtk.Widget):
             child.destroy()
+
         self.flow_box.foreach(remove)
 
     def show_view(self):
         self.window.show_window(self.multi_view, "multiview" + str(id(self)))
 
-    @asyncme.mainloop_only
     def add_item(self, remote_file: RemoteFile):
-        self.pixmaps.get_pixbuf_for_multi_preview(remote_file, self.callback)
+        self.pixmaps.get_pixbuf_for_type(remote_file, "multi", self.callback, remote_file)
 
     @asyncme.mainloop_only
     def callback(self, pic_path, remote_file):
@@ -232,7 +230,7 @@ class MultiItemView:
         child.result.set_size_request(self.pixmaps.grid_item_width, self.pixmaps.grid_item_height)
         child.style_ctx.add_class(item_id)
 
-        if remote_file.string:
+        if remote_file.string and remote_file.show_name:
             child.label.set_text(remote_file.string)
         else:
             child.label.hide()
@@ -289,6 +287,7 @@ class ResultsHandler:
         return current_index
 
     def view_image(self, widget, item):
+        self.window.multiview.opened_item = item
         self.window.singleview.clear()
         self.window.singleview.show_view()
         self.window.singleview.show_previews(self.page_items, item.data)
@@ -299,8 +298,8 @@ class ResultsHandler:
         # Somehow selected items sometimes is empty so this extra step
         for item in selected_items:
             self.window.singleview.show_file(item.data)
-            self.source.file_selected(item.data)
             self.window.singleview.text.set_text(item.data.string.replace('_', ' '))
+            self.source.file_selected(item.data)
             break
 
     def results_selection_changed(self, box: Gtk.FlowBox):
@@ -348,6 +347,8 @@ class ResultsHandler:
         self.page_items.clear()
         self.current_page = None
         self.selected_resources.clear()
+        print("clearing items........")
+        self.source.files_selection_changed(self.selected_resources)
 
     def add_page_item(self, file: RemoteFile):
         self.window.multiview.add_item(file)

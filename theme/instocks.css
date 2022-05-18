@@ -27,7 +27,15 @@ window flowbox > flowboxchild:selected {
 
 .options {
     background-color: transparent;
+    outline-style: none;
   }
+
+.options *:hover {
+    background: none;
+  }
+
+
+
 
 .options_button *{
      background-color: #3F3F3F;

@@ -86,6 +86,55 @@
             </packing>
         </child>
     </object>
+    <object class="GtkExpander" id="options_group">
+        <property name="name">options_group</property>
+        <property name="visible">True</property>
+        <property name="can-focus">True</property>
+        <property name="label-fill">True</property>
+        <child>
+            <object class="GtkRevealer">
+                <property name="height-request">300</property>
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="transition-duration">500</property>
+                <property name="reveal-child">True</property>
+                <child>
+                    <object class="GtkScrolledWindow">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="margin-top">10</property>
+                        <child>
+                            <object class="GtkViewport">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <child>
+                                    <object class="GtkListBox" id="options_group_list">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="margin-start">30</property>
+                                        <property name="margin-top">10</property>
+                                        <property name="margin-bottom">10</property>
+                                        <property name="selection-mode">none</property>
+                                        <property name="activate-on-single-click">False</property>
+                                        <style>
+                                            <class name="options"/>
+                                        </style>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+            </object>
+        </child>
+        <child type="label">
+            <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">expander</property>
+            </object>
+        </child>
+    </object>
     <object class="GtkLinkButton" id="options_link">
         <property name="label" translatable="yes">button</property>
         <property name="visible">True</property>
@@ -185,6 +234,7 @@
     <object class="GtkLabel" id="options_textview">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
+        <property name="halign">start</property>
         <property name="use-markup">True</property>
         <property name="wrap">True</property>
         <property name="ellipsize">end</property>

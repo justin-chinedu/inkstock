@@ -1,18 +1,11 @@
 import json
-import sys
 
-from inkex.gui import asyncme
-from tasks.svg_color_replace import SvgColorReplace
+from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query
+from sources.svg_source import SvgSource
 from utils.constants import CACHE_DIR
 from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
-
 from windows.basic_window import BasicWindow
-from windows.options_window import OptionsWindow, OptionType, ChangeReciever
-
-sys.path.insert(
-    1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
-
-from remote import RemoteFile, RemotePage, RemoteSource
+from windows.options_window import ChangeReciever
 
 
 class UndrawWindow(BasicWindow):
@@ -46,14 +39,18 @@ class UndrawPage(RemotePage, ChangeReciever):
         super().__init__(remote_source, page_no)
         self.results = results
         self.remote_source = remote_source
+        self.default_color_task = None
 
     def get_page_content(self):
         for result in self.results:
-            yield UndrawIllustration(self.remote_source, result)
+            illustration = UndrawIllustration(self.remote_source, result)
+            if self.default_color_task:
+                illustration.tasks.append(self.default_color_task)
+            yield illustration
 
 
-class Undraw(RemoteSource):
-    name = "Undraw"
+class UnDraw(SvgSource):
+    name = "UnDraw"
     desc = "Open-source illustrations for any idea you can imagine and create."
     icon = "icons/undraw.png"
     file_cls = UndrawIllustration
@@ -64,17 +61,12 @@ class Undraw(RemoteSource):
     reqUrl = "https://undraw.co/api/search"
     window_cls = UndrawWindow
 
+    default_svg_color = "#6c63ff"
+    default_search_query = "acc"
+
     def __init__(self, cache_dir, dm):
         super().__init__(cache_dir, dm)
-        self.query = ""
         self.pix_manager = self.setup_pixmanager()
-        self.results = []
-        self.options = {"dominant_color": None}
-        self.color_ext = SvgColorReplace()
-        self.options_window = OptionsWindow(self)
-        self.options_window.set_option("query", None, OptionType.SEARCH, "Search unDraw")
-        self.options_window.set_option(
-            "dominant_color", None, OptionType.COLOR, "Choose dominant color")
 
     def setup_pixmanager(self):
         pix = PixmapManager(CACHE_DIR, pref_width=200,
@@ -100,19 +92,19 @@ class Undraw(RemoteSource):
         return pix
 
     def get_page(self, page_no: int):
-        self.current_page = page_no
         results = self.results[page_no * self.items_per_page: self.items_per_page * (page_no + 1)]
         if results:
+            self.current_page = page_no
             page = UndrawPage(self, page_no, results)
+            page.default_color_task = self.default_color_task
             self.window.add_page(page)
 
-    def search(self, query, tags=...):
+    def search(self, query):
         self.results = []
-        query = query.lower().replace(' ', '_')
-        self.query = query
+        self.query = sanitize_query(query)
         self.window.clear_pages()
         self.window.show_spinner()
-        headersList = {
+        headers_list = {
             "Accept": "*/*",
             "User-Agent": "Inkscape",
             "Content-Type": "application/json"
@@ -120,7 +112,7 @@ class Undraw(RemoteSource):
 
         payload = json.dumps({"query": query})
         try:
-            response = self.session.request("POST", self.reqUrl, data=payload, headers=headersList)
+            response = self.session.request("POST", self.reqUrl, data=payload, headers=headers_list)
             illus = response.json()["illos"]
             for item in illus:
                 result = {
@@ -133,34 +125,3 @@ class Undraw(RemoteSource):
             self.get_page(0)
         except:
             print("There was an error trying to fetch content")
-
-    def on_window_attached(self, window: BasicWindow, window_pane):
-        super().on_window_attached(window, window_pane)
-        self.query = "acc"
-        asyncme.run_or_none(self.search)(self.query)
-        # self.window.show_options_window(self.options_window.window, self)
-
-    def on_change(self, options):
-
-        self.options = options
-        if self.window and self.query and self.query != options["query"]:
-            self.query = options["query"]
-            self.search(self.query)
-            return
-        color = None
-        if "dominant_color" in self.options:
-            color = self.options["dominant_color"]
-        if self.window and color:
-            items = self.window.results.get_multi_view_displayed_data(only_selected=True)
-            self.change_items_color(color, items)
-
-    @asyncme.run_or_none
-    def change_items_color(self, color, items):
-        old_color = "#6c63ff"
-        self.color_ext.is_active = True
-        self.color_ext.new_fill_colors[old_color] = color
-        for item in items:
-            thumbnail = item.data.get_thumbnail()
-            thumbnail = self.color_ext.do_task(thumbnail)
-            thumbnail = self.pix_manager.get_pixbuf_for_task(thumbnail)
-            self.update_item(thumbnail, item)
