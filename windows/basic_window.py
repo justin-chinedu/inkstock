@@ -32,7 +32,7 @@ class BasicWindow(ChildWindow):
         return results_pixmanager
 
     @asyncme.mainloop_only
-    def show_window(self, window):
+    def show_window(self, window, name):
         """Adds home window and result window to the page stack
         Custom Windows should override this method to customize location of results window
         """
@@ -43,7 +43,7 @@ class BasicWindow(ChildWindow):
             # child.unparent()
 
         page_stack.foreach(remove)
-        name = window.name + self.source.name
+        name = window.name + name
         if not page_stack.get_child_by_name(name):
             page_stack.add_named(window.window, name)
         child = page_stack.get_child_by_name(name)
@@ -76,7 +76,7 @@ class BasicWindow(ChildWindow):
         if not self.results:
             source = self.source
             self.results = self.gapp.load_window("results_window", pixmaps=self.get_pixmaps(), source=source)
-        self.show_window(self.results)
+        self.show_window(self.results, self.source.name)
         self.results.handler.add_page(page)
 
     @asyncme.mainloop_only

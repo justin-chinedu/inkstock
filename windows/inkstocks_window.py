@@ -3,15 +3,13 @@ from inkex.gui import asyncme
 from inkex.gui.app import GtkApp
 
 from utils.constants import CACHE_DIR, SOURCES, WINDOWS
-from utils.download_manager import DownloadManager
+from utils.import_manager import ImportManager
 from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
 from utils.stop_watch import StopWatch
 
-"""TODO: Override pixelmapmanger's load_from_name_method"""
 from inkex.gui.window import Window
 from remote import RemoteSource
 
-gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk
 
 
@@ -44,6 +42,7 @@ class InkStocksWindow(Window):
         self.source_desc = self.widget('source_desc')
         self.source_icon = self.widget('source_icon')
         self.progress: Gtk.ProgressBar = self.widget('download_progress')
+        self.progress.hide()
         self.no_of_selected = self.widget('no_of_selected')
         self.page_stack: Gtk.Stack = self.widget('page_stack')
         self.import_files_btn.connect('clicked', self.import_files)
@@ -56,8 +55,8 @@ class InkStocksWindow(Window):
 
         self.sources_pixmanager = PixmapManager(CACHE_DIR, scale=3, pref_width=150,
                                                 pref_height=150, padding=40, aspect_ratio=SIZE_ASPECT_GROW, )
-        self.dm = DownloadManager(self)
-        self.sources = [source(CACHE_DIR, self.dm) for source in RemoteSource.sources.values()]
+        self.import_manager = ImportManager(self)
+        self.sources = [source(CACHE_DIR, self.import_manager) for source in RemoteSource.sources.values()]
         self.sources_lists.show_all()
         self.sources_results = []
         self.sources_windows = []
@@ -78,7 +77,7 @@ class InkStocksWindow(Window):
 
         # select the source
         self.sources_lists.select_row(
-            self.sources_lists.get_row_at_y(default_source_index))
+            self.sources_lists.get_row_at_index(default_source_index))
 
     @staticmethod
     def load_css(data: str):
@@ -90,7 +89,7 @@ class InkStocksWindow(Window):
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def import_files(self, *args):
-        pass
+        self.add_and_show_import_window()
 
     def add_window(self, window_cls, source):
         """if window has not been attached to source, load window"""
@@ -106,29 +105,30 @@ class InkStocksWindow(Window):
         child = self.page_stack.get_child_by_name(source.name)
         self.page_stack.set_visible_child(child)
 
+    def add_and_show_import_window(self):
+        self.source_title.set_text("InkStock")
+        self.source_desc.set_markup("Save files as zip or import into Inkscape")
+        self.sources_lists.set_sensitive(False)
+        self.import_files_btn.set_sensitive(False)
+        if not self.import_manager.window:
+            self.gapp.load_window(self.import_manager.window_cls.name, manager=self.import_manager)
+        self.show_window(self.import_manager.window, self.import_manager)
+        self.import_manager.show_window()
+
+    def show_sources_window(self):
+        self.sources_lists.set_sensitive(True)
+        self.import_files_btn.set_sensitive(True)
+        row: ListBoxRowWithData = self.sources_lists.get_selected_row()
+        self.signal_handler.source_selected(self.sources_lists, row)
+
 
 class MainHandler:
-    watch = StopWatch()
 
     def __init__(self, window):
         self.window = window
 
     def get_selected_source(self) -> RemoteSource:
         return self.window.sources_lists.get_selected_row().source
-
-    def search_changed(self, search_entry):
-        source = self.get_selected_source()
-        query = search_entry.get_text()
-        if query and (len(query) > 2):
-            self.watch.start_or_reset(3, self.async_search, query, source)
-            # self.async_search(query, source, reset_all= True)
-        else:
-            self.watch.cancel()
-
-    @asyncme.run_or_none
-    def async_search(self, query, source: RemoteSource):
-        """Asynchronous searching in PyPI"""
-        source.search(query)
 
     def source_selected(self, listbox, row):
         self.window.source_title.set_text(row.name)

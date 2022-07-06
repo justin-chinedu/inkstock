@@ -27,8 +27,8 @@ class ResultsWindow(ChildWindow):
     def show_window(self, window, name):
         page_stack: Gtk.Stack = self.window
 
-        def remove(child: Gtk.Widget):
-            page_stack.remove(child)
+        def remove(page_child: Gtk.Widget):
+            page_stack.remove(page_child)
 
         page_stack.foreach(remove)
         if not page_stack.get_child_by_name(name):

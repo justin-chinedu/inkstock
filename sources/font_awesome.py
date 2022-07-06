@@ -4,7 +4,7 @@ from os.path import exists
 from gi.repository import Gtk
 
 from inkex.gui import asyncme
-from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query
+from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
 from sources.svg_source import SvgSource, add_color_changes_to_items
 from tasks.svg_color_replace import SvgColorReplace
 from utils.constants import CACHE_DIR
@@ -50,14 +50,7 @@ class FAIcon(RemoteFile):
     def __init__(self, remote, info):
         super().__init__(remote, info)
         self.name = f"{self.info['name']}-fontawesome"
-
-    def get_thumbnail(self):
-        name = self.name + ".svg"
-        return self.remote.to_local_file(self.info["thumbnail"], name)
-
-    def get_file(self):
-        name = self.name + "file.svg"
-        return self.remote.to_local_file(self.info["file"], name)
+        self.file_name = self.name + ".svg"
 
 
 class FAPage(RemotePage):
@@ -97,6 +90,7 @@ class FASource(SvgSource):
     desc = "Font Awesome is the Internet's icon library and toolkit, used by millions of designers, developers, " \
            "and content creators. "
     icon = "icons/font-awesome.png"
+    source_type = SourceType.ICON
     file_cls = FAIcon
     page_cls = FAPage
     is_default = False

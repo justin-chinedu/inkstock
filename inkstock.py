@@ -14,12 +14,13 @@ from inkex.elements import (
     SvgDocumentElement, StyleElement
 )
 from inkex.gui.listview import GOBJ, IconView
-from utils.utils import StopWatch
+from utils.stop_watch import StopWatch
 """TODO: Override pixelmapmanger's load_from_name_method"""
 from inkex.gui.pixmap import PadFilter, PixmapManager, SizeFilter
 from inkex.gui.window import Window
 from inkex.styles import Style
 from remote import RemoteSource, RemotePage, RemoteFile
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk
 
@@ -60,7 +61,7 @@ class FlowBoxView:
          
 
     def add_item(self, remote_file: RemoteFile):
-        image_pixbuff  = self.pixmaps.get(remote_file.thumbnail , item=remote_file)
+        image_pixbuff = self.pixmaps.get(remote_file.get_thumbnail(), item=remote_file)
         builder = Gtk.Builder()
         builder.add_objects_from_file(
             'ui/inkstocks.ui', ("result_item", ""))
@@ -70,28 +71,6 @@ class FlowBoxView:
         text = builder.get_object("result_text")
         text.set_text(remote_file.string)
         self.widget.add(FlowBoxChildWithData(result_item, remote_file))
-
-class ResultsIconView(IconView):
-    """The search results shown as icons"""
-
-    def get_markup(self, item):
-        return item.string
-
-    def get_icon(self, item):
-        return item.thumbnail
-
-    def setup(self):
-        # self._list.set_markup_column(1)
-        # self._list.set_pixbuf_column(2)
-        # crt, crp = self._list.get_cells()
-        # self.crt_notify = crt.connect('notify', self.keep_size)
-        super().setup()
-
-    def keep_size(self, crt, *args):
-        """Hack Gtk to keep cells smaller"""
-        crt.handler_block(self.crt_notify)
-        #crt.set_property('width', 150)
-        crt.handler_unblock(self.crt_notify)
 
 class Handler:
     pages : dict[str, list[RemotePage]] = {}
@@ -303,7 +282,6 @@ class InkStockWindow(Window):
             css_prov,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-
 class InkStockApp(GtkApp):
     app_name = "InkStock"
     ui_dir = "ui"
@@ -315,7 +293,6 @@ class InkStockApp(GtkApp):
         self.ext = kwargs.setdefault("ext", None)
         super().__init__(start_loop, start_gui, **kwargs)
         
-
 class InkstockExtension(EffectExtension):
 
     def merge_defs(self, defs):
@@ -421,4 +398,4 @@ class InkstockExtension(EffectExtension):
 
 if __name__ == '__main__':
     InkStockApp(start_loop=True)
-    InkstockExtension().run()
+    # InkstockExtension().run()

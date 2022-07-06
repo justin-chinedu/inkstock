@@ -194,6 +194,13 @@
             </packing>
         </child>
     </object>
+    <object class="GtkListBox" id="options_select_list">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <style>
+            <class name="options_select_list"/>
+        </style>
+    </object>
     <object class="GtkSeparator" id="options_separator">
         <property name="visible">True</property>
         <property name="can-focus">False</property>

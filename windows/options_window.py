@@ -7,11 +7,11 @@ from inkex.gui import asyncme
 from utils.stop_watch import StopWatch
 
 
-class ChangeReciever():
+class ChangeReceiver:
     def on_change(self, *args, **kwargs): pass
 
 
-class OptionsWindow(ChangeReciever):
+class OptionsWindow(ChangeReceiver):
     ui_file = "ui/options.ui"
 
     def __init__(self, change_receiver):
@@ -25,28 +25,30 @@ class OptionsWindow(ChangeReciever):
         self.window.set_hexpand(True)
         self.window.show_all()
 
-    def set_option(self, name, values, type, label=None, show_separator=True, attach=True):
-        if type == OptionType.CHECKBOX:
+    def set_option(self, name, values, option_type, label=None, show_separator=True, attach=True):
+        if option_type == OptionType.CHECKBOX:
             option = CheckBoxOption(name, values, self, label)
-        elif type == OptionType.COLOR:
+        elif option_type == OptionType.COLOR:
             option = ColorOption(name, values, self, label)
-        elif type == OptionType.DROPDOWN:
+        elif option_type == OptionType.DROPDOWN:
             option = DropDownOption(name, values, self, label)
-        elif type == OptionType.TEXTFIELD:
+        elif option_type == OptionType.TEXTFIELD:
             option = TextFieldOption(name, values, self, label)
-        elif type == OptionType.LINK:
+        elif option_type == OptionType.LINK:
             option = Link(name, values, self, label)
-        elif type == OptionType.BUTTON:
+        elif option_type == OptionType.BUTTON:
             option = Button(name, values, self, label)
-        elif type == OptionType.TEXTVIEW:
+        elif option_type == OptionType.TEXTVIEW:
             option = TextView(name, values, self)
-        elif type == OptionType.SEARCH:
+        elif option_type == OptionType.SEARCH:
             option = SearchField(name, self, label)
-        elif type == OptionType.GROUP:
+        elif option_type == OptionType.GROUP:
             option = Group(name, values, self, label)
             if attach:
                 for value in values:
                     self.__attached_options.append(value)
+        elif option_type == OptionType.SELECT:
+            option = SelectOption(name, values, self, label)
         else:
             raise ValueError("Widget type not available")
 
@@ -259,5 +261,37 @@ class Group(Option):
         return separator
 
 
+class SelectOption(Option):
+    def __init__(self, name, options, change_receiver, label):
+        super().__init__(name, options, "options_select_list", change_receiver)
+        self.view.connect("row-selected", self.option_selected)
+        for option in options:
+            self.add_option(option)
+
+    def add_option(self, option):
+        row = SelectOptionRow(option)
+        self.view.add(row)
+
+    def option_selected(self, listbox, row):
+        self.value = row.data
+        print(f"row selected {row.data}")
+        self.receiver.on_change(self)
+
+
+class SelectOptionRow(Gtk.ListBoxRow):
+
+    def __init__(self, view):
+        super().__init__()
+        self.data = view
+        self.set_margin_top(10)
+        self.set_size_request(50, 40)
+        if isinstance(view, str):
+            label = Gtk.Label(label=view)
+            self.add(label)
+        else:
+            self.add(view)
+        self.show_all()
+
+
 class OptionType(enum.Enum):
-    DROPDOWN, TEXTFIELD, COLOR, CHECKBOX, SEARCH, TEXTVIEW, LINK, BUTTON, GROUP = range(9)
+    DROPDOWN, TEXTFIELD, COLOR, CHECKBOX, SEARCH, TEXTVIEW, LINK, BUTTON, GROUP, SELECT = range(10)

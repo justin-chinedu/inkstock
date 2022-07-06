@@ -14,6 +14,7 @@ from inkex.elements import (
 from inkex.styles import Style
 from remote import RemoteSource
 from utils.constants import SOURCES
+from windows.import_window import ImportWindow, ImportResults
 
 gi.require_version("Gtk", "3.0")
 
@@ -25,6 +26,7 @@ class Handler:
 
 from windows.inkstocks_window import InkStocksWindow
 from windows.results_window import ResultsWindow
+
 
 class InkStockApp(GtkApp):
     """Base App
@@ -39,6 +41,8 @@ class InkStockApp(GtkApp):
         self.windows = RemoteSource.windows
         self.windows.insert(0, InkStocksWindow)
         self.windows.insert(0, ResultsWindow)
+        self.windows.insert(0, ImportWindow)
+        self.windows.insert(0, ImportResults)
 
         super().__init__(start_loop, start_gui, **kwargs)
 

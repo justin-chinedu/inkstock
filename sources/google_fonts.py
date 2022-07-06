@@ -4,16 +4,16 @@ import os
 from os.path import exists
 
 from inkex.gui import asyncme
-from remote import RemotePage, RemoteSource
+from remote import RemotePage, RemoteSource, SourceType
 from sources.font_file import FontFile
 from utils.constants import CACHE_DIR
 from utils.pixelmap import PixmapManager, SIZE_ASPECT_CROP
 from utils.text_to_png import render_text_to_png
 from windows.basic_window import BasicWindow
-from windows.options_window import ChangeReciever, OptionsWindow, OptionType
+from windows.options_window import ChangeReceiver, OptionsWindow, OptionType
 
 
-class GoogleFontsWindow(BasicWindow, ChangeReciever):
+class GoogleFontsWindow(BasicWindow, ChangeReceiver):
     name = "google_fonts_window"
 
     def __init__(self, gapp):
@@ -32,6 +32,7 @@ class GoogleFontsWindow(BasicWindow, ChangeReciever):
             background-image: url("{url}");
             }}
         """
+        self.source.pix_manager = pix
         return pix
 
 
@@ -39,6 +40,7 @@ class GoogleFontFile(FontFile):
     def __init__(self, remote, info):
         super().__init__(remote, info)
         self.name = f"{self.info['name']}-google-fonts"
+        self.file_name = self.name + ".ttf"
 
     def get_thumbnail(self):
         file_name = self.name + ".png"
@@ -48,10 +50,6 @@ class GoogleFontFile(FontFile):
                            spacing=self.line_spacing, font_size=self.font_size, text_color=self.color,
                            bg_color=self.bg_color)
         return file_name
-
-    def get_file(self):
-        name = self.info['name'] + ".ttf"
-        return self.remote.to_local_file(self.info["file"], name)
 
 
 class GoogleFontsPage(RemotePage):
@@ -71,12 +69,13 @@ class GoogleFontsPage(RemotePage):
         self.results = results
 
 
-class GoogleFontsSource(RemoteSource, ChangeReciever):
+class GoogleFontsSource(RemoteSource, ChangeReceiver):
     name = "Google Fonts"
     desc = "Google Fonts is a computer font and web font service owned by Google. This includes free and open source " \
            "font families, an interactive web directory for browsing the library, and APIs for using the fonts via " \
            "CSS and Android. "
     icon = "icons/google_fonts.jpg"
+    source_type = SourceType.FONT
     file_cls = GoogleFontFile
     page_cls = GoogleFontsPage
     is_default = False

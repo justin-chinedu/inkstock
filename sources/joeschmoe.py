@@ -11,7 +11,7 @@ from windows.options_window import OptionsWindow, OptionType
 sys.path.insert(
     1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
 
-from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query
+from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
 
 
 class JoeschmoeWindow(BasicWindow):
@@ -49,14 +49,7 @@ class JoeschmoeIllustration(RemoteFile):
     def __init__(self, remote, info):
         super().__init__(remote, info)
         self.name = f"{self.info['name']}-joeschmoe"
-
-    def get_thumbnail(self):
-        name = self.name + ".svg"
-        return self.remote.to_local_file(self.info["thumbnail"], name)
-
-    def get_file(self):
-        name = self.name + "file.svg"
-        return self.remote.to_local_file(self.info["file"], name)
+        self.file_name = self.name + ".svg"
 
 
 class JoeschmoePage(RemotePage):
@@ -84,6 +77,7 @@ class JoeschmoeSource(SvgSource):
     desc = "Joe Schmoes are colorful characters illustrated by Jon&amp;Jess that can be used as profile picture " \
            "placeholders for live websites or design mock ups. "
     icon = "icons/joeschmoe.png"
+    source_type = SourceType.ILLUSTRATION
     file_cls = JoeschmoeIllustration
     page_cls = JoeschmoePage
     is_default = False

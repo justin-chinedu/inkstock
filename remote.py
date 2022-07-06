@@ -1,3 +1,4 @@
+import enum
 import importlib
 import inspect
 import logging
@@ -112,10 +113,17 @@ LICENSES = {
 
 
 class RemoteFile:
-    get_thumbnail = lambda self: self.remote.to_local_file(self.info["thumbnail"])
-    get_file = lambda self: self.remote.to_local_file(self.info["file"])
+    def get_thumbnail(self):
+        return self.remote.to_local_file(self.info["thumbnail"], self.file_name)
+
+    def get_file(self):
+        return self.info["file"]
 
     def __init__(self, remote, info):
+        # name to be displayed
+        self.name = None
+        # name to be saved as including extension
+        self.file_name = None
         for field in ("name", "thumbnail", "license", "file"):
             if field not in info:
                 raise ValueError(f"Field {field} not provided in RemoteFile package")
@@ -162,10 +170,19 @@ class RemotePage:
         )
 
 
+class SourceType(enum.Enum):
+    ICON = "icons"
+    ILLUSTRATION = "illustration"
+    FONT = "fonts"
+    PHOTO = "photos"
+    SWATCH = "swatches"
+
+
 class RemoteSource(ABC):
     name = None
     desc = None
     icon = None
+    source_type = None
     file_cls = RemoteFile
     page_cls = RemotePage
     is_default = False
@@ -226,7 +243,7 @@ class RemoteSource(ABC):
 
     def files_selection_changed(self, files):
         self.selected_files = files
-        self.dm.add_files(self.__class__.name, files)
+        self.dm.add_files(self, files)
 
     def __del__(self):
         self.session.close()
@@ -298,5 +315,5 @@ class RemoteSource(ABC):
         pass
 
 
-def sanitize_query(query):
+def sanitize_query(query: str):
     return query.lower().replace(' ', '_')

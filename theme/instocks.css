@@ -3,11 +3,20 @@ window flowbox > flowboxchild {
     color: black;
     box-shadow: 5px 5px 5px 2px #000000cd;
     outline-style: none;
+    border-radius: 5%;
 }
 
 window flowbox > flowboxchild:selected {
     background-color: #29A3AF;
     padding: 5px;
+}
+
+window flowbox > flowboxchild * {
+    border-radius: 5%;
+}
+
+#import_cancel{
+  border-radius: 50%;
 }
 
 .view_image{
@@ -25,19 +34,17 @@ window flowbox > flowboxchild:selected {
     border-radius: 0% 0% 10% 10%;
 }
 
-.options {
+.options:not(listbox){
     background-color: transparent;
     outline-style: none;
   }
 
-.options *:hover {
+/*.options :hover{
     background: none;
-  }
+  }*/
 
 
-
-
-.options_button *{
+.options_button * {
      background-color: #3F3F3F;
      color: white;
      margin-top: 15px;
@@ -50,4 +57,3 @@ window flowbox > flowboxchild:selected {
      background-color: transparent;
      padding: 0px;
  }
-  

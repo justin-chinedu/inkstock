@@ -1,5 +1,5 @@
 from inkex.gui import asyncme
-from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query
+from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
 from sources.svg_source import SvgSource
 from utils.constants import CACHE_DIR
 from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
@@ -40,15 +40,8 @@ class MaterialWindow(BasicWindow):
 class MaterialIcon(RemoteFile):
     def __init__(self, remote, info):
         super().__init__(remote, info)
-        self.name = f"{self.info['name']}{self.id}-material"
-
-    def get_thumbnail(self):
-        name = self.name + ".svg"
-        return self.remote.to_local_file(self.info["thumbnail"], name)
-
-    def get_file(self):
-        name = self.name + "file.svg"
-        return self.remote.to_local_file(self.info["file"], name)
+        self.name = f"{self.info['name']}-material"
+        self.file_name = self.name + ".svg"
 
 
 class MaterialIconsPage(RemotePage):
@@ -99,6 +92,7 @@ class MaterialIconsSource(SvgSource):
            "href='https://fonts.google.com/icons'>Material Icons</a>. The icons are designed under the material " \
            "design guidelines. "
     icon = "icons/material-icons.png"
+    source_type = SourceType.ICON
     file_cls = MaterialIcon
     page_cls = MaterialIconsPage
     is_default = True

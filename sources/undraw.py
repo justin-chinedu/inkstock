@@ -1,11 +1,11 @@
 import json
 
-from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query
+from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
 from sources.svg_source import SvgSource
 from utils.constants import CACHE_DIR
 from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
 from windows.basic_window import BasicWindow
-from windows.options_window import ChangeReciever
+from windows.options_window import ChangeReceiver
 
 
 class UndrawWindow(BasicWindow):
@@ -24,17 +24,16 @@ class UndrawIllustration(RemoteFile):
     def __init__(self, remote, info):
         super().__init__(remote, info)
         self.name = f"{self.info['name']}-undraw"
+        self.file_name = self.name + ".svg"
 
     def get_thumbnail(self):
-        name = self.name + ".svg"
-        return self.remote.to_local_file(self.info["thumbnail"], name)
+        return self.remote.to_local_file(self.info["thumbnail"], self.file_name)
 
     def get_file(self):
-        name = self.name + "file.svg"
-        return self.remote.to_local_file(self.info["file"], name)
+        return self.info["file"]
 
 
-class UndrawPage(RemotePage, ChangeReciever):
+class UndrawPage(RemotePage, ChangeReceiver):
     def __init__(self, remote_source: RemoteSource, page_no, results):
         super().__init__(remote_source, page_no)
         self.results = results
@@ -49,10 +48,35 @@ class UndrawPage(RemotePage, ChangeReciever):
             yield illustration
 
 
+def setup_pixmanager():
+    pix = PixmapManager(CACHE_DIR, pref_width=200,
+                        pref_height=200, scale=1,
+                        grid_item_height=250,
+                        grid_item_width=250,
+                        padding=20,
+                        aspect_ratio=SIZE_ASPECT_GROW)
+    pix.style = """.{id}{{
+        background-color: white;
+        background-size: contain;
+        background-repeat: no-repeat;
+        border-radius: 5%;
+        background-origin: content-box;
+        background-image: url("{url}");
+        }}
+        
+        window flowbox > flowboxchild {{
+        border-radius: 5%;
+        }}
+    """
+    pix.single_preview_scale = 0.7
+    return pix
+
+
 class UnDraw(SvgSource):
     name = "UnDraw"
     desc = "Open-source illustrations for any idea you can imagine and create."
     icon = "icons/undraw.png"
+    source_type = SourceType.ILLUSTRATION
     file_cls = UndrawIllustration
     page_cls = UndrawPage
     is_default = False
@@ -66,30 +90,7 @@ class UnDraw(SvgSource):
 
     def __init__(self, cache_dir, dm):
         super().__init__(cache_dir, dm)
-        self.pix_manager = self.setup_pixmanager()
-
-    def setup_pixmanager(self):
-        pix = PixmapManager(CACHE_DIR, pref_width=200,
-                            pref_height=200, scale=1,
-                            grid_item_height=250,
-                            grid_item_width=250,
-                            padding=20,
-                            aspect_ratio=SIZE_ASPECT_GROW)
-        pix.style = """.{id}{{
-            background-color: white;
-            background-size: contain;
-            background-repeat: no-repeat;
-            border-radius: 5%;
-            background-origin: content-box;
-            background-image: url("{url}");
-            }}
-            
-            window flowbox > flowboxchild {{
-            border-radius: 5%;
-            }}
-        """
-        pix.single_preview_scale = 0.7
-        return pix
+        self.pix_manager = setup_pixmanager()
 
     def get_page(self, page_no: int):
         results = self.results[page_no * self.items_per_page: self.items_per_page * (page_no + 1)]
