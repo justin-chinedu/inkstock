@@ -1,17 +1,17 @@
 import sys
 
-from inkex.gui import asyncme
+from core.utils import asyncme
 from sources.svg_source import SvgSource
-from utils.constants import CACHE_DIR
-from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
+from core.constants import CACHE_DIR
+from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_GROW
 
 from windows.basic_window import BasicWindow
-from windows.options_window import OptionsWindow, OptionType
+from windows.options_window import OptionType
 
 sys.path.insert(
     1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
 
-from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
+from sources.remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
 
 
 class JoeschmoeWindow(BasicWindow):
@@ -85,12 +85,11 @@ class JoeschmoeSource(SvgSource):
     items_per_page = 8
     reqUrl = "https://joeschmoe.io/api/v1{gender}{seed}"
     window_cls = JoeschmoeWindow
-
     default_svg_color = "#fce7d4"
     default_search_query = "jane"
 
-    def __init__(self, cache_dir, dm):
-        super().__init__(cache_dir, dm)
+    def __init__(self, cache_dir, import_manager):
+        super().__init__(cache_dir, import_manager)
         self.options_window.set_option(
             "gender", ["all", "female", "male"], OptionType.DROPDOWN, "Choose gender")
         self.options_window.set_option("no_of_avatars", 1, OptionType.TEXTFIELD, "No of avatars")
@@ -122,9 +121,3 @@ class JoeschmoeSource(SvgSource):
             req_url = self.reqUrl.format(gender="", seed=f"/{query}")
 
         self.get_page(0, req_url)
-
-    def on_window_attached(self, window: BasicWindow, window_pane):
-        super().on_window_attached(window, window_pane)
-
-    def on_change(self, options):
-        super().on_change(options)

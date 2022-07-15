@@ -3,17 +3,17 @@ import json
 import os
 from os.path import exists
 
-from inkex.gui import asyncme
-from remote import RemotePage, RemoteSource, SourceType
+from core.utils import asyncme
+from sources.remote import RemotePage, RemoteSource, SourceType
 from sources.font_file import FontFile
-from utils.constants import CACHE_DIR
-from utils.pixelmap import PixmapManager, SIZE_ASPECT_CROP
-from utils.text_to_png import render_text_to_png
+from core.constants import CACHE_DIR
+from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_CROP
+from core.utils.text_to_png import render_text_to_png
 from windows.basic_window import BasicWindow
-from windows.options_window import ChangeReceiver, OptionsWindow, OptionType
+from windows.options_window import OptionsChangeListener, OptionsWindow, OptionType
 
 
-class GoogleFontsWindow(BasicWindow, ChangeReceiver):
+class GoogleFontsWindow(BasicWindow, OptionsChangeListener):
     name = "google_fonts_window"
 
     def __init__(self, gapp):
@@ -69,7 +69,7 @@ class GoogleFontsPage(RemotePage):
         self.results = results
 
 
-class GoogleFontsSource(RemoteSource, ChangeReceiver):
+class GoogleFontsSource(RemoteSource, OptionsChangeListener):
     name = "Google Fonts"
     desc = "Google Fonts is a computer font and web font service owned by Google. This includes free and open source " \
            "font families, an interactive web directory for browsing the library, and APIs for using the fonts via " \
@@ -83,8 +83,8 @@ class GoogleFontsSource(RemoteSource, ChangeReceiver):
     items_per_page = 4
     window_cls = GoogleFontsWindow
 
-    def __init__(self, cache_dir, dm):
-        super().__init__(cache_dir, dm)
+    def __init__(self, cache_dir, import_manager):
+        super().__init__(cache_dir, import_manager)
         self.results = []
         self.query = ""
         self.options = {}

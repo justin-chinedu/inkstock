@@ -1,16 +1,10 @@
-import gi
-from inkex.gui import asyncme
-from inkex.gui.app import GtkApp
-
-from utils.constants import CACHE_DIR, SOURCES, WINDOWS
-from utils.import_manager import ImportManager
-from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
-from utils.stop_watch import StopWatch
-
-from inkex.gui.window import Window
-from remote import RemoteSource
-
 from gi.repository import Gtk, Gdk
+
+from core.constants import CACHE_DIR, SOURCES
+from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_GROW
+from core.gui.window import Window
+from core.import_manager import ImportManager
+from sources.remote import RemoteSource
 
 
 class ListBoxRowWithData(Gtk.ListBoxRow):
@@ -30,7 +24,7 @@ class InkStocksWindow(Window):
     name = "inkstocks_window"
     primary = True
 
-    def __init__(self, gapp: GtkApp):
+    def __init__(self, gapp):
         super().__init__(gapp)
         css = """
          @import url("theme/instocks.css");
@@ -108,6 +102,9 @@ class InkStocksWindow(Window):
     def add_and_show_import_window(self):
         self.source_title.set_text("InkStock")
         self.source_desc.set_markup("Save files as zip or import into Inkscape")
+        self.source_icon.clear()
+        icon = self.sources_pixmanager.get_pixbuf_for_type("icons/inkstock_logo.svg", "icon", None)
+        self.source_icon.set_from_pixbuf(icon)
         self.sources_lists.set_sensitive(False)
         self.import_files_btn.set_sensitive(False)
         if not self.import_manager.window:

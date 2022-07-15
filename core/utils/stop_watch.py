@@ -1,6 +1,6 @@
 import time
 
-from inkex.gui import asyncme
+from core.utils import asyncme
 
 
 class StopWatch:

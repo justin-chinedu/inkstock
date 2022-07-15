@@ -5,8 +5,7 @@ import requests
 def gen_svg_template(width: int, height: int, colors: list[list[int]]) -> str:
     unit_width = width / len(colors)
     colors_hex = list(map(lambda rgb: '#{:02x}{:02x}{:02x}'.format(*rgb), colors))
-    svg = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-        <svg
+    svg = """<svg
            width="{width}px"
            height="{height}px"
            viewBox="0 0 {width} {height}"
@@ -20,7 +19,7 @@ def gen_svg_template(width: int, height: int, colors: list[list[int]]) -> str:
         </svg>
      """
     rect = """<rect
-       style="fill:{fill};stroke-width:0;"
+       style="fill:{fill};stroke:#000000;stroke-width:0;"
        id="{rect_id}"
        width="{width}"
        height="{height}"
@@ -72,8 +71,19 @@ def gen_random_svg_palettes(no_of_palettes: int) -> list[str]:
     return svgs
 
 
-if __name__ == '__main__':
-    svgs = gen_random_svg_palettes(6)
-    for svg in svgs:
-        with open(f"/sdcard/swatch{str(id(svg))}.svg", mode="w+") as f:
-            f.writelines(svg)
+def gen_random_svg_palette() -> str:
+    palette = fetch_palette_random()
+    svg = gen_svg_template(72, 48, palette)
+    return svg
+
+
+def gen_svg_palette(pref_colors: list[list[int]]) -> str:
+    palette = fetch_palette_from_colors(colors=pref_colors)
+    svg = gen_svg_template(72, 48, palette)
+    return svg
+
+# if __name__ == '__main__':
+#     svgs = gen_random_svg_palettes(6)
+#     for svg in svgs:
+#         with open(f"/sdcard/swatch{str(id(svg))}.svg", mode="w+") as f:
+#             f.writelines(svg)

@@ -1,12 +1,15 @@
+import asyncio
 import json
 from abc import ABC, abstractmethod
 from os.path import exists
 
 from gi.repository import Gtk
 
-from inkex.gui import asyncme
-from remote import RemoteSource, RemoteFile, sanitize_query
+import tasks.task
+from core.utils import asyncme
+from sources.remote import RemoteSource, RemoteFile, sanitize_query
 from tasks.svg_color_replace import SvgColorReplace
+from tasks.task import task_loop
 from windows.basic_window import BasicWindow
 from windows.options_window import OptionType, OptionsWindow, ColorOption
 from windows.results_window import FlowBoxChildWithData
@@ -18,8 +21,8 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
     default_svg_color = "#000000"
     default_search_query = "a"
 
-    def __init__(self, cache_dir, dm):
-        super().__init__(cache_dir, dm)
+    def __init__(self, cache_dir, import_manager):
+        super().__init__(cache_dir, import_manager)
         self.query = ""
         self.last_selected_file = None
         self.color_ext = SvgColorReplace()
@@ -52,11 +55,10 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
             return
 
         query = sanitize_query(options["query"])
-        # if search query changed
-        if query and self.query != query:
+
+        if query and self.query != query:  # if search query changed
             self.query = query
             self.options = options
-            print(f"searched for {query}")
             self.search(self.query)
             return
 
@@ -73,60 +75,60 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
 
         self.options = options
 
-        multi_items = []
-        single_items = []
+        multi_items = []  # the multiview thumbnails
+        single_items = []  # the single view thumbnails
         single_item = None  # the preview image
         results_is_multi_view = self.window.results.is_multi_view()
         if results_is_multi_view:
             items = self.window.results.get_multi_view_displayed_data(only_selected=True)
             multi_items.extend(items)
-            print(f"multi items to update : {list(map(lambda x: x.data.string, items))}")
         else:
             items = self.window.results.singleview.list.get_selected_children()
             single_items.extend(items)
+            # ony interested in the first because multiple selection is off
             single_item = items[0]
-            print(f"single items to update : {list(map(lambda x: x.data.string, single_items))}")
-            print(f"single image to update : {single_item.data.string}")
             # get corresponding multiview items
             m_items = self.window.results.get_multi_view_displayed_data(only_selected=False)
             single_files = list(map(lambda x: x.data, single_items))
             m_items = list(filter(lambda x: x.data in single_files, m_items))
             multi_items.extend(m_items)
-            print(f"single multi items to update : {list(map(lambda x: x.data.string, multi_items))}")
 
-        # check for color changes and apply color replace task to item
+        # check for color changes in options and apply color replace task to item
         color_changes = [(key, value) for key, value in options.items()
                          if (key.startswith("fill") or key.startswith("stroke")) and value]
-        if color_changes:
-            print(f"{color_changes} color changes for multi items: {list(map(lambda x: x.data.string, multi_items))}")
-            print(f"{color_changes} color changes for single items: {list(map(lambda x: x.data.string, single_items))}")
 
-            # if empty nothing is done
+        if color_changes:
             add_color_changes_to_items(color_changes, multi_items)
             add_color_changes_to_items(color_changes, single_items)
+            self.update_items_sequentially(single_items, single_item, multi_items)
+            return
 
-            # update items
-            for item in single_items:
-                self.pix_manager.get_pixbuf_for_type(item.data, "thumb", self.update_item, item)
-                print(f"updated single item : {item}")
-
-            if single_item:
-                self.pix_manager.get_pixbuf_for_type(single_item.data, "single",
-                                                     self.window.results.singleview.set_image)
-                print(f"updated single image : {single_item}")
-
+    def update_items_sequentially(self, single_items, single_item, multi_items):
+        # single view image, single view thumbs and multi view thumbs need to be updated in that order
+        # to avoid race conditions and unprecedented problems
+        def cb_single_items(*args):
+            self.update_item(*args)
             for item in multi_items:
                 self.pix_manager.get_pixbuf_for_type(item.data, "multi", self.update_item, item)
-                print(f"updated multi item : {item}")
-            return
+
+        def cb_single_item(*args):
+            self.window.results.singleview.set_image(*args)
+            self.pix_manager.get_pixbuf_for_type(single_items[0].data, "thumb",
+                                                 cb_single_items, single_items[0])
+
+        if single_item:
+            self.pix_manager.get_pixbuf_for_type(single_item.data, "single",
+                                                 cb_single_item)
+        else:
+            for item in multi_items:
+                self.pix_manager.get_pixbuf_for_type(item.data, "multi", self.update_item, item)
 
     def clear_color_options(self):
         self.options_window.remove_option("color_group")
 
     @asyncme.mainloop_only
-    def show_svg_colors(self, file):
-        _, fill_colors, stroke_colors = self.color_ext.extract_color(file.get_thumbnail())
-        print(f"{file.string} selected with colors : {(fill_colors, stroke_colors)}")
+    def show_svg_colors(self, file, fill_colors, stroke_colors):
+        #  _, fill_colors, stroke_colors = self.color_ext.extract_color(file.get_thumbnail())
 
         # if color has been modified
         # should show modified color instead
@@ -176,11 +178,19 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
 
     @asyncme.mainloop_only
     def file_selected(self, file: RemoteFile):
-
         if file != self.last_selected_file:
             self.last_selected_file = file
             self.clear_color_options()
-            self.show_svg_colors(file)
+
+            def cb(result, error):
+                if error:
+                    print(f"Error occurred in task: {error}")
+                if result:
+                    svg, fill_colors, stroke_colors = result
+                    self.show_svg_colors(file, fill_colors, stroke_colors)
+
+            asyncio.run_coroutine_threadsafe(tasks.task.add_task_to_queue(self.color_ext.extract_color, cb, file),
+                                             loop=task_loop)
 
     def files_selection_changed(self, files: list[RemoteFile]):
         super().files_selection_changed(files)
@@ -206,7 +216,6 @@ def add_color_changes_to_items(color_changes: list[tuple], items: list[FlowBoxCh
 
     fill_color_changes = list(filter(lambda x: x[0].startswith("fill"), color_changes))
     stroke_color_changes = list(filter(lambda x: x[0].startswith("stroke"), color_changes))
-    print(f"color changes for item-- fill: {fill_color_changes} -- stroke: {stroke_color_changes}")
 
     color_replace = SvgColorReplace()
     color_replace.is_active = True
@@ -223,13 +232,9 @@ def add_color_changes_to_items(color_changes: list[tuple], items: list[FlowBoxCh
         new_color = color[1]
         color_replace.new_stroke_colors[old_color] = new_color
 
-    print(
-        f"created color replace task--- fill: {color_replace.new_fill_colors}, "
-        f"stroke -- {color_replace.new_stroke_colors}")
-
     for item in items:
         file: RemoteFile = item.data
-        # avoid adding duplicate color task
+        # avoid adding duplicate color replace task
         for task in file.tasks:
             if isinstance(task, SvgColorReplace):
                 file.tasks.remove(task)

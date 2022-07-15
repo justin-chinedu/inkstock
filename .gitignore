@@ -1,3 +1,2 @@
 inkex
-json/material-icons-optimized.json
-utils/fetch-icons.py
+fetch-icons.py

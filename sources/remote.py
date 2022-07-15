@@ -12,104 +12,11 @@ from cachecontrol.caches.file_cache import FileCache
 from cachecontrol.heuristics import ExpiresAfter
 from gi.repository import Gtk, Gdk
 
-from inkex.gui import asyncme
+from core.constants import LICENSES
+from core.utils import asyncme
 from tasks.task import Task
+from core.network.adapter import FileAdapter
 from windows.basic_window import BasicWindow
-
-LICENSE_ICONS = os.path.join(os.path.dirname(__file__), 'licenses')
-
-LICENSES = {
-    "cc-0": {
-        "name": "CC0",
-        "modules": ["nocopyright"],
-        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
-        "overlay": "cc0.svg",
-    },
-    "cc-by-3.0": {
-        "name": "CC-BY 3.0 Unported",
-        "modules": ["by"],
-        "url": "https://creativecommons.org/licenses/by/3.0/",
-        "overlay": "cc-by.svg",
-    },
-    "cc-by-4.0": {
-        "name": "CC-BY 4.0 Unported",
-        "modules": ["by"],
-        "url": "https://creativecommons.org/licenses/by/4.0/",
-        "overlay": "cc-by.svg",
-    },
-    "cc-by-sa-4.0": {
-        "name": "CC-BY SA 4.0",
-        "modules": ["by", "sa"],
-        "url": "https://creativecommons.org/licenses/by-sa/4.0/",
-        "overlay": "cc-by-sa.svg",
-    },
-    "cc-by-sa-3.0": {
-        "name": "CC-BY SA 3.0",
-        "modules": ["by", "sa"],
-        "url": "https://creativecommons.org/licenses/by-sa/3.0/",
-        "overlay": "cc-by-sa.svg",
-    },
-    "cc-by-nc-sa-4.0": {
-        "name": "CC-BY NC SA 4.0",
-        "modules": ["by", "sa", "nc"],
-        "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-        "overlay": "cc-by-nc-sa.svg",
-    },
-    "cc-by-nc-sa-3.0": {
-        "name": "CC-BY NC SA 3.0",
-        "modules": ["by", "sa", "nc"],
-        "url": "https://creativecommons.org/licenses/by-nc-sa/3.0/",
-        "overlay": "cc-by-nc-sa.svg",
-    },
-    "cc-by-nc-3.0": {
-        "name": "CC-BY NC 3.0",
-        "modules": ["by", "nc"],
-        "url": "https://creativecommons.org/licenses/by-nc/3.0/",
-        "overlay": "cc-by-nc.svg",
-    },
-    "cc-by-nd-3.0": {
-        "name": "CC-BY ND 3.0",
-        "modules": ["by", "nd"],
-        "url": "https://creativecommons.org/licenses/by-nd/3.0/",
-        "overlay": "cc-by-nd.svg",
-    },
-    "gpl-2": {
-        "name": "GPLv2",
-        "modules": ["retaincopyrightnotice", "sa"],
-        "url": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt",
-        "overlay": "gpl.svg",
-    },
-    "gpl-3": {
-        "name": "GPLv3",
-        "modules": ["retaincopyrightnotice", "sa"],
-        "url": "https://www.gnu.org/licenses/gpl-3.0.txt",
-        "overlay": "gpl.svg",
-    },
-    "agpl-3": {
-        "name": "AGPLv3",
-        "modules": ["retaincopyrightnotice", "sa"],
-        "url": "https://www.gnu.org/licenses/agpl-3.0.txt",
-        "overlay": "gpl.svg",
-    },
-    "mit": {
-        "name": "MIT",
-        "modules": ["retaincopyrightnotice"],
-        "url": "https://mit-license.org/",
-        "overlay": "mit.svg",
-    },
-    "asl": {
-        "name": "Apache License",
-        "modules": ["retaincopyrightnotice"],
-        "url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
-        "overlay": "asl.svg",
-    },
-    "bsd": {
-        "name": "BSD",
-        "modules": ["retaincopyrightnotice", "noendorsement"],
-        "url": "https://opensource.org/licenses/BSD-3-Clause",
-        "overlay": "bsd.svg",
-    },
-}
 
 
 class RemoteFile:
@@ -132,10 +39,6 @@ class RemoteFile:
         self.remote: RemoteSource = remote
         self.tasks: list[Task] = []
         self.show_name = False
-
-    @property
-    def string(self):
-        return self.info["name"]
 
     @property
     def license(self):
@@ -166,7 +69,7 @@ class RemotePage:
             Simply yields a list of remotefiles
         """
         raise NotImplementedError(
-            "You must implement a search function for this remote source!"
+            "You must implement a get_page_content function for this remote page!"
         )
 
 
@@ -202,9 +105,9 @@ class RemoteSource(ABC):
             cls.sources[cls.__name__] = cls
             cls.windows.append(cls.window_cls)
 
-    def __init__(self, cache_dir, dm) -> None:
+    def __init__(self, cache_dir, import_manager) -> None:
         self.current_page = 0
-        self.dm = dm
+        self.import_manager = import_manager
         self.options_window = None
         self.session = requests.session()
         self.cache_dir = cache_dir
@@ -215,6 +118,7 @@ class RemoteSource(ABC):
                 heuristic=ExpiresAfter(days=1),
             ),
         )
+        self.session.mount('file://', FileAdapter())
 
     def get_page(self, page_no: int):
         """
@@ -241,9 +145,12 @@ class RemoteSource(ABC):
     def file_selected(self, file: RemoteFile):
         pass
 
+    def file_saved(self, file: RemoteFile):
+        self.import_manager.save_file(self, file)
+
     def files_selection_changed(self, files):
         self.selected_files = files
-        self.dm.add_files(self, files)
+        self.import_manager.add_files(self, files)
 
     def __del__(self):
         self.session.close()
@@ -299,7 +206,8 @@ class RemoteSource(ABC):
         css = self.pix_manager.style
         css = css.format(id=item.id, url=pic_path)
         item.style_prov.load_from_data(bytes(css, "utf8"))
-
+        item.style_ctx.add_provider_for_screen(Gdk.Screen.get_default(), item.style_prov,
+                                               Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         # css_prov = Gtk.CssProvider()
         # css_prov.load_from_data(bytes(css, "utf8"))
         # item.style_ctx.remove_provider_for_screen(Gdk.Screen.get_default(), item.style_prov)

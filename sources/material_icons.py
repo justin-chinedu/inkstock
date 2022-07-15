@@ -1,8 +1,8 @@
-from inkex.gui import asyncme
-from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
+from core.utils import asyncme
+from sources.remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
 from sources.svg_source import SvgSource
-from utils.constants import CACHE_DIR
-from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
+from core.constants import CACHE_DIR
+from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_GROW
 from windows.basic_window import BasicWindow
 
 
@@ -42,6 +42,7 @@ class MaterialIcon(RemoteFile):
         super().__init__(remote, info)
         self.name = f"{self.info['name']}-material"
         self.file_name = self.name + ".svg"
+        self.show_name = True
 
 
 class MaterialIconsPage(RemotePage):

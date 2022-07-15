@@ -1,16 +1,13 @@
-import os
-from typing import Set
-
 import gi
-from inkex.gui import asyncme
-from inkex.gui.window import ChildWindow
-from utils.constants import CACHE_DIR
-from remote import RemoteFile, RemotePage, RemoteSource
-from utils.pixelmap import PixmapManager
+from core.utils import asyncme
+from core.gui.window import ChildWindow
+from core.constants import CACHE_DIR
+from sources.remote import RemoteFile, RemotePage, RemoteSource
+from core.gui.pixmap_manager import PixmapManager
 from windows.view_change_listener import ViewChangeListener
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, GObject
+from gi.repository import Gtk, Gdk
 
 
 class ResultsWindow(ChildWindow):
@@ -92,6 +89,8 @@ class FlowBoxChildWithData(Gtk.FlowBoxChild):
         self.style_ctx: Gtk.StyleContext = self.result.get_style_context()
         self.style_prov = None
         self.button.hide()
+        if self.data.show_name:
+            self.label.show()
         self.add(self.result)
         self.show()
 
@@ -118,7 +117,6 @@ class SingleItemView:
     def clear(self):
         def remove(child: Gtk.Widget):
             child.destroy()
-
         self.list.foreach(remove)
 
     def show_view(self):
@@ -209,7 +207,6 @@ class MultiItemView:
     def clear(self):
         def remove(child: Gtk.Widget):
             child.destroy()
-
         self.flow_box.foreach(remove)
 
     def show_view(self):
@@ -230,8 +227,8 @@ class MultiItemView:
         child.result.set_size_request(self.pixmaps.grid_item_width, self.pixmaps.grid_item_height)
         child.style_ctx.add_class(item_id)
 
-        if remote_file.string and remote_file.show_name:
-            child.label.set_text(remote_file.string)
+        if remote_file.name and remote_file.show_name:
+            child.label.set_text(remote_file.name)
         else:
             child.label.hide()
         # child.set_name(item_id)
@@ -295,12 +292,18 @@ class ResultsHandler:
     def results_single_item_selected(self, box: Gtk.FlowBox):
         """Called when an item is selected in from flow box in single view """
         selected_items = box.get_selected_children()
-        # Somehow selected items sometimes is empty so this extra step
+        # Somehow selected items sometimes is empty so using a loop
         for item in selected_items:
-            self.window.singleview.show_file(item.data)
-            self.window.singleview.text.set_text(item.data.string.replace('_', ' '))
             self.source.file_selected(item.data)
+            self.window.singleview.text.set_text(item.data.name.replace('_', ' '))
+            self.window.singleview.show_file(item.data)
             break
+
+    def results_single_save_clicked(self, widget):
+        items_to_save = self.window.singleview.list.get_selected_children()
+        # Somehow selected items sometimes is empty so using a loop
+        for item in items_to_save:
+            self.source.file_saved(item.data)
 
     def results_selection_changed(self, box: Gtk.FlowBox):
 
@@ -319,7 +322,9 @@ class ResultsHandler:
         for item in self.activated_items:
             if item not in selected_items:
                 item.button.hide()
-                item.label.show()
+                if item.data.show_name:
+                    item.label.show()
+
                 items_to_remove.append(item)
         for item in items_to_remove:
             self.activated_items.remove(item)
@@ -347,7 +352,6 @@ class ResultsHandler:
         self.page_items.clear()
         self.current_page = None
         self.selected_resources.clear()
-        print("clearing items........")
         self.source.files_selection_changed(self.selected_resources)
 
     def add_page_item(self, file: RemoteFile):

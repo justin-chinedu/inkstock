@@ -1,16 +1,8 @@
-import json
-from os.path import exists
-
-from gi.repository import Gtk
-
-from inkex.gui import asyncme
-from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
-from sources.svg_source import SvgSource, add_color_changes_to_items
-from tasks.svg_color_replace import SvgColorReplace
-from utils.constants import CACHE_DIR
-from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
+from sources.remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
+from sources.svg_source import SvgSource
+from core.constants import CACHE_DIR
+from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_GROW
 from windows.basic_window import BasicWindow
-from windows.options_window import OptionsWindow, OptionType, ColorOption
 
 
 class FAWindow(BasicWindow):
@@ -51,6 +43,7 @@ class FAIcon(RemoteFile):
         super().__init__(remote, info)
         self.name = f"{self.info['name']}-fontawesome"
         self.file_name = self.name + ".svg"
+        self.show_name = True
 
 
 class FAPage(RemotePage):
@@ -77,12 +70,11 @@ class FAPage(RemotePage):
                 "summary": "",
                 "file": url,
             }
-
-            fa_icon = FAIcon(self.remote_source, info)
-            if self.default_color_task:
-                fa_icon.tasks.append(self.default_color_task)
-
-            yield fa_icon
+            if url:
+                fa_icon = FAIcon(self.remote_source, info)
+                if self.default_color_task:
+                    fa_icon.tasks.append(self.default_color_task)
+                yield fa_icon
 
 
 class FASource(SvgSource):

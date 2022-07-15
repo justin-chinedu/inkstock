@@ -1,18 +1,10 @@
-import base64
-import logging
+import asyncio
 import math
 import os
-import re
-import threading
-from concurrent.futures import Future
 
-import gi
+from gi.repository import GLib, GdkPixbuf
 
-from inkex.gui import asyncme
-from tasks.task import Task
-
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib, GdkPixbuf, Gdk
+from tasks.task import task_loop, add_task_to_queue
 
 BILINEAR = GdkPixbuf.InterpType.BILINEAR
 HYPER = GdkPixbuf.InterpType.HYPER
@@ -23,8 +15,8 @@ SIZE_ASPECT_CROP = 1
 
 class PixmapManager:
     pixmap_dir = None
-    # Default styling for items, All styles must follow this template
-    # could be overridden when providing manager by sources
+    # Default styling for multiview thumbnails, All styles must follow this template
+    # could be overridden when providing a pixmap manager by sources
     style = """.{id}{{
             background-size: cover;
             background-origin: content-box;
@@ -37,7 +29,6 @@ class PixmapManager:
             border-radius: 5%;
             }}
         """
-    tasks: list[Task] = []
 
     def __init__(self, cache_dir, scale=0.7, pref_width=200, pref_height=200,
                  padding=0, aspect_ratio=SIZE_ASPECT_CROP, grid_item_width=400, grid_item_height=300):
@@ -61,37 +52,35 @@ class PixmapManager:
         self.cache_dir = cache_dir
         self.cache = {}
 
-    def get_pixbuf_for_type(self, file, type, callback, *args):
+    @staticmethod
+    async def _apply_tasks_to_item(remote_file, display_type, callback, *args):
+        filepath = remote_file.get_thumbnail()
+        for task in remote_file.tasks:
+            if task.is_active:
+                filepath = await task.do_task(filepath)
+        return filepath, display_type, callback, *args
 
-        if type == "icon":
-            pixbuf = self.get_pixbuf(file, self.pref_width, self.pref_height, self.padding, self.scale,
-                                     SIZE_ASPECT_GROW, return_pixbuf=True)
-            return pixbuf
+    def _get_pixbuf_for_type(self, args):
+        thumbnail, display_type, callback, *args = args
 
-        thumbnail = file.get_thumbnail()
+        if not thumbnail:
+            return
 
-        for task in file.tasks:
-            if task.is_active and thumbnail:
-                thumbnail = task.do_task(thumbnail)
-
-        if type == "multi":
+        # for thumbnails in multi view
+        if display_type == "multi":
             pixbuf_path = self.get_pixbuf(thumbnail, self.pref_width, self.pref_height, self.padding, self.scale,
                                           SIZE_ASPECT_CROP)
-            if callback:
-                callback(pixbuf_path, *args)
-            else:
-                return pixbuf_path, *args
 
-        elif type == "thumb":
+            callback(pixbuf_path, *args)
+        # for thumbnails in single view
+        elif display_type == "thumb":
             pixbuf_path = self.get_pixbuf(thumbnail, self.preview_item_width, self.preview_item_height,
                                           self.preview_padding, self.preview_scaling, self.preview_aspect_ratio,
                                           thumbnail=True)
-            if callback:
-                callback(pixbuf_path, *args)
-            else:
-                return pixbuf_path, *args
 
-        elif type == "single":
+            callback(pixbuf_path, *args)
+        # for preview image in single view
+        elif display_type == "single":
             # TODO: Find a neater way to reset and restore values
             padding = self.enable_padding
             self.enable_padding = False
@@ -104,10 +93,27 @@ class PixmapManager:
             self.enable_aspect = aspect
             del padding
             del aspect
-            if callback:
-                callback(pixbuf, *args)
-            else:
-                return pixbuf, *args
+            callback(pixbuf, *args)
+
+        return False
+
+    def get_pixbuf_for_type(self, remote_file, display_type, callback, *args):
+        # return pixbuf immediately for source icons, no need to fetch asynchronously
+        # since it doesn't take much time
+        if display_type == "icon":
+            pixbuf = self.get_pixbuf(remote_file, self.pref_width, self.pref_height, self.padding, self.scale,
+                                     SIZE_ASPECT_GROW, return_pixbuf=True)
+            return pixbuf
+
+        def cb(result, error):
+            if error:
+                raise RuntimeError(str(error))
+            if result:
+                GLib.idle_add(self._get_pixbuf_for_type, result)
+
+        asyncio.run_coroutine_threadsafe(
+            add_task_to_queue(self._apply_tasks_to_item, cb, remote_file, display_type, callback, *args),
+            loop=task_loop)
 
     def get_pixbuf(self, name: str, pref_width, pref_height, padding, scale, aspect_ratio, return_pixbuf=False,
                    thumbnail=False):
@@ -232,10 +238,8 @@ class PixmapManager:
         return isinstance(data, str) and "<svg" not in data
 
     def load_file_from_path(self, path: str, scale):
-
         img_format, width, height = GdkPixbuf.Pixbuf.get_file_info(path)
         pixbuf: GdkPixbuf.Pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(path, width * scale, height * scale)
-
         return pixbuf
 
     def get_pixmap_path(self, name):

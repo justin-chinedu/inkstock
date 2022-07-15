@@ -1,9 +1,9 @@
-from utils.constants import CACHE_DIR
-from inkex.gui import asyncme
-from inkex.gui.window import ChildWindow
+from core.constants import CACHE_DIR
+from core.utils import asyncme
+from core.gui.window import ChildWindow
 from gi.repository import Gtk
 
-from utils.pixelmap import PixmapManager
+from core.gui.pixmap_manager import PixmapManager
 
 
 class BasicWindow(ChildWindow):

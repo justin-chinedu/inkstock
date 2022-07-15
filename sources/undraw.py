@@ -1,11 +1,11 @@
 import json
 
-from remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
+from sources.remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
 from sources.svg_source import SvgSource
-from utils.constants import CACHE_DIR
-from utils.pixelmap import PixmapManager, SIZE_ASPECT_GROW
+from core.constants import CACHE_DIR
+from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_GROW
 from windows.basic_window import BasicWindow
-from windows.options_window import ChangeReceiver
+from windows.options_window import OptionsChangeListener
 
 
 class UndrawWindow(BasicWindow):
@@ -25,6 +25,7 @@ class UndrawIllustration(RemoteFile):
         super().__init__(remote, info)
         self.name = f"{self.info['name']}-undraw"
         self.file_name = self.name + ".svg"
+        self.show_name = True
 
     def get_thumbnail(self):
         return self.remote.to_local_file(self.info["thumbnail"], self.file_name)
@@ -33,7 +34,7 @@ class UndrawIllustration(RemoteFile):
         return self.info["file"]
 
 
-class UndrawPage(RemotePage, ChangeReceiver):
+class UndrawPage(RemotePage, OptionsChangeListener):
     def __init__(self, remote_source: RemoteSource, page_no, results):
         super().__init__(remote_source, page_no)
         self.results = results
@@ -88,8 +89,8 @@ class UnDraw(SvgSource):
     default_svg_color = "#6c63ff"
     default_search_query = "acc"
 
-    def __init__(self, cache_dir, dm):
-        super().__init__(cache_dir, dm)
+    def __init__(self, cache_dir, import_manager):
+        super().__init__(cache_dir, import_manager)
         self.pix_manager = setup_pixmanager()
 
     def get_page(self, page_no: int):

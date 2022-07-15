@@ -1,7 +1,8 @@
 from gi.repository import Gtk, Gdk
 
-from inkex.gui import ChildWindow, asyncme
-from remote import RemoteFile
+from core.gui.window import ChildWindow
+from core.utils import asyncme
+from sources.remote import RemoteFile
 from windows.basic_window import BasicWindow
 
 
@@ -126,7 +127,7 @@ class ImportResults(ChildWindow):
 
 
 class ImportHandler:
-    # Doesn't do anything yet
+    # Handler ignores all callbacks
     def __init__(self, window, manager):
         self.manager = manager
         self.window: ImportResults = window
@@ -140,3 +141,5 @@ class ImportHandler:
     def next_btn_clicked(self, btn): pass
 
     def results_single_item_selected(self, box: Gtk.FlowBox): pass
+
+    def results_single_save_clicked(self, widget): pass

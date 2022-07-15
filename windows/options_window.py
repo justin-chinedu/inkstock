@@ -1,17 +1,15 @@
 import enum
-from base64 import b16encode
 from typing import Set
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk
 
-from inkex.gui import asyncme
-from utils.stop_watch import StopWatch
-
-
-class ChangeReceiver:
-    def on_change(self, *args, **kwargs): pass
+from core.utils import asyncme
 
 
-class OptionsWindow(ChangeReceiver):
+class OptionsChangeListener:
+    def on_change(self, *args, **kwargs): raise NotImplementedError()
+
+
+class OptionsWindow(OptionsChangeListener):
     ui_file = "ui/options.ui"
 
     def __init__(self, change_receiver):
@@ -50,7 +48,7 @@ class OptionsWindow(ChangeReceiver):
         elif option_type == OptionType.SELECT:
             option = SelectOption(name, values, self, label)
         else:
-            raise ValueError("Widget type not available")
+            raise ValueError("Widget display_type not available")
 
         option.view.set_hexpand(False)
         if attach and not show_separator:
@@ -274,7 +272,6 @@ class SelectOption(Option):
 
     def option_selected(self, listbox, row):
         self.value = row.data
-        print(f"row selected {row.data}")
         self.receiver.on_change(self)
 
 

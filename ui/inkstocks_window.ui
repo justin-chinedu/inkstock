@@ -9,11 +9,11 @@
     </object>
     <object class="GtkWindow" id="inkstocks_window">
         <property name="can-focus">False</property>
-        <property name="title" translatable="yes">Inkscape Stocks</property>
+        <property name="title" translatable="yes">InkStock</property>
         <property name="window-position">center</property>
         <property name="default-width">1500</property>
         <property name="default-height">1000</property>
-        <property name="icon-name">inkscape</property>
+        <property name="icon">../icons/inkstock_logo.svg</property>
         <property name="gravity">center</property>
         <child>
             <object class="GtkPaned" id="pane_view">
@@ -31,10 +31,10 @@
                             <object class="GtkImage" id="inkscape_icon">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
-                                <property name="xpad">28</property>
-                                <property name="ypad">23</property>
+                                <property name="xpad">4</property>
+                                <property name="ypad">4</property>
+                                <property name="pixbuf">../icons/inkstock_logo.svg</property>
                                 <property name="pixel-size">40</property>
-                                <property name="icon-name">inkscape</property>
                             </object>
                             <packing>
                                 <property name="expand">False</property>
