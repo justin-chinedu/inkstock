@@ -1,14 +1,11 @@
-from inkex.gui import asyncme
-from remote import RemoteFile, RemotePage, RemoteSource
-import json
-import sys
-from utils.constants import CACHE_DIR
-from utils.pixelmap import PixmapManager
+from core.utils import asyncme
+from keys import KEYS
+from sources.remote import RemoteFile, RemotePage, RemoteSource, SourceType, sanitize_query
+from core.constants import CACHE_DIR
+from core.gui.pixmap_manager import PixmapManager
 
 from windows.basic_window import BasicWindow
-from windows.options_window import ChangeReciever, OptionType, OptionsWindow
-from windows.results_window import ResultsWindow
-from gi.repository import Gtk
+from windows.options_window import OptionsChangeListener, OptionType, OptionsWindow
 
 
 class PixabayWindow(BasicWindow):
@@ -20,12 +17,9 @@ class PixabayWindow(BasicWindow):
         super().__init__(gapp)
 
     def get_pixmaps(self):
-        return PixmapManager(CACHE_DIR, pref_width=600, pref_height=500, scale=1)
-
-    def on_results_created(self, results: ResultsWindow):
-        results_flow: Gtk.FlowBox = results.results.widget
-        result_item = results.results.builder.get_object("result_item")
-        # result_item.set_hexpand(False)
+        pix = PixmapManager(CACHE_DIR, pref_width=600, pref_height=500, scale=1)
+        self.source.pix_manager = pix
+        return pix
 
 
 class PixabayFile(RemoteFile):
@@ -33,20 +27,13 @@ class PixabayFile(RemoteFile):
     def __init__(self, remote, info, headers):
         super().__init__(remote, info)
         self.headers = headers
-        self.name = f"{self.id}-{self.info['id']}-pixabay"
+        self.name = f"{self.info['id']}-pixabay"
+        self.file_name = self.name + ".jpg"
 
-    @property
-    def thumbnail(self):
+    def get_thumbnail(self):
         view_trigger = self.info["view_link"]
-        # self.remote.session.get(view_trigger, headers=self.headers)
-        name = self.name + ".jpg"
-        return self.remote.to_local_file(self.info["thumbnail"], name, self.headers)
-
-    def get_file(self):
-        download_trigger = self.info["download_link"]
-        self.remote.session.get(download_trigger, headers=self.headers)
-        name = self.name + "file.jpg"
-        return self.remote.to_local_file(self.info["file"], name, self.headers)
+        self.remote.session.head(view_trigger, headers=self.headers)
+        return self.remote.to_local_file(self.info["thumbnail"], self.file_name, self.headers)
 
 
 class PixabayPage(RemotePage):
@@ -57,7 +44,7 @@ class PixabayPage(RemotePage):
     def get_page_content(self):
         headers_list = {
             "Accept": "*/*",
-            "User-Agent": "Inkscape",
+            "User-Agent": "InkStock",
             "Content-Type": "application/json",
         }
 
@@ -66,7 +53,7 @@ class PixabayPage(RemotePage):
                   "image_type": self.remote_source.options["image_type"]}
 
         if self.query:
-            params["q"] = self.query
+            params["query"] = self.query
 
         color = self.remote_source.options.get("colors", None)
         if color and color != "all":
@@ -77,12 +64,12 @@ class PixabayPage(RemotePage):
 
         params["per_page"] = self.remote_source.items_per_page
         params["page"] = self.page_no + 1
-        params["key"] = "10377294-d1bbb9384e56deb909bb35d1f"
+        params["key"] = KEYS["pixabay"]
 
         try:
             response = self.remote_source.session.request(
                 "GET", self.remote_source.reqUrl, params=params, headers=headers_list)
-            photos = []
+
             json_response = response.json()
 
             for photo in json_response["hits"]:
@@ -96,16 +83,18 @@ class PixabayPage(RemotePage):
                     "file": photo["largeImageURL"],
                     "name": "",
                     "view_link": photo["pageURL"],
-                    "license": "Pixabay Licence"
+                    "license": "https://pixabay.com/service/license/"
                 }
 
-                photos.append(PixabayFile(self.remote_source, info, headers_list))
-            return photos
+                file = PixabayFile(self.remote_source, info, headers_list)
+                yield file
+
         except Exception as err:
-            print("Error trying to establish connection")
+            print(f"Error(Pixabay) couldn't fetch images {err}")
+            return []
 
 
-class Pixabay(RemoteSource, ChangeReciever):
+class Pixabay(RemoteSource, OptionsChangeListener):
     name = "Pixabay"
     desc = "Over 2.6 million+ high quality stock images, videos and music shared by our talented community."
     icon = "icons/pixabay.png"
@@ -114,16 +103,24 @@ class Pixabay(RemoteSource, ChangeReciever):
     is_default = False
     is_enabled = True
     items_per_page = 12
+    options_window_width = 350
     reqUrl = "https://pixabay.com/api/"
     window_cls = PixabayWindow
+    source_type = SourceType.PHOTO
 
-    def __init__(self, cache_dir) -> None:
-        super().__init__(cache_dir)
+    def __init__(self, cache_dir, import_manager) -> None:
+        super().__init__(cache_dir, import_manager)
         self.query = ""
         # setting defaults
-        self.options = {}
+        self.options = {
+            "order": "popular",
+            "orientation": "all",
+            "image_type": "all",
+            "category": "all",
+            "colors": "all"
+        }
         self.options_window = OptionsWindow(self)
-        self.options_window.set_option("q", None, OptionType.SEARCH, "Search Pixabay")
+        self.options_window.set_option("query", None, OptionType.SEARCH, "Search Pixabay")
         self.options_window.set_option(
             "order", ["popular", "latest"], OptionType.DROPDOWN, "Order by")
         self.options_window.set_option(
@@ -138,15 +135,16 @@ class Pixabay(RemoteSource, ChangeReciever):
             "colors",
             ["all", "grayscale", "transparent", "red", "orange", "yellow", "green", "turquoise", "blue", "lilac",
              "pink", "white", "gray", "black", "brown"], OptionType.DROPDOWN, "Preferred color")
+        self.options_window.set_option("info", "", OptionType.TEXTVIEW, show_separator=False)
+        self.options_window.set_option("profile_link", "", OptionType.LINK, label="View Profile", attach=False)
 
-    @asyncme.run_or_none
     def get_page(self, page_no: int):
         self.current_page = page_no
         page = PixabayPage(self, self.current_page, self.query)
         self.window.add_page(page)
 
     @asyncme.run_or_none
-    def search(self, query, tags=...):
+    def search(self, query):
         query = query.lower().replace(' ', '_')
         self.query = query
         self.window.clear_pages()
@@ -155,14 +153,29 @@ class Pixabay(RemoteSource, ChangeReciever):
 
     def on_window_attached(self, window: BasicWindow, window_pane):
         super().on_window_attached(window, window_pane)
-        window_pane.set_position(350)
         self.query = ""
-        self.window.show_options_window(self.options_window.window)
-        self.window.show_spinner()
-        self.get_page(0)
+        asyncme.run_or_none(self.get_page)(0)
 
     def on_change(self, options):
-        self.options = options
-        if self.query != options["q"]:
-            self.query = options["q"]
+        if not self.window:
+            return
+
+        query = sanitize_query(options["query"])
+        # if search query changed
+        if query and self.query != query:
+            self.query = query
+            self.options = options
             self.search(self.query)
+            return
+
+    def file_selected(self, file: RemoteFile):
+        info = file.info
+        text = f'<span  size="large" weight="normal" >Photo by</span>\n\n' + \
+               f'<span  size="large" weight="bold" >{info["user"]}</span>\n\n' + \
+               (f'<span  size="medium" weight="normal" >{info["name"]}</span>\n\n' if info["name"] else '') + \
+               f'<span  size="medium" weight="normal" >Available under the Pixabay License, <a href="{info["license"]}">More Info</a></span>'
+        text.replace("&", "&amp;")
+        self.options_window.options["info"].view.set_markup(text)
+        if info["user_url"]:
+            self.options_window.attach_option("profile_link")
+            self.options_window.options["profile_link"].view.set_uri(info["user_url"])

@@ -1,18 +1,15 @@
-from inkex.gui import asyncme
-from remote import RemoteFile, RemotePage, RemoteSource
-import json
-import sys
-from utils.constants import CACHE_DIR
-from utils.pixelmap import PixmapManager
+from core.utils import asyncme
+from keys import KEYS
+from sources.remote import RemoteFile, RemotePage, RemoteSource, SourceType
+from core.constants import CACHE_DIR
+from core.gui.pixmap_manager import PixmapManager
 
 from windows.basic_window import BasicWindow
-from windows.options_window import ChangeReciever, OptionType, OptionsWindow
-from windows.results_window import ResultsWindow
-from gi.repository import Gtk
+from windows.options_window import OptionsChangeListener, OptionType, OptionsWindow
 
 
 class UnsplashWindow(BasicWindow):
-    name = "pexels_window"
+    name = "unsplash_window"
 
     def __init__(self, gapp):
         # name of the widget file and id 
@@ -20,12 +17,9 @@ class UnsplashWindow(BasicWindow):
         super().__init__(gapp)
 
     def get_pixmaps(self):
-        return PixmapManager(CACHE_DIR, pref_width=600, pref_height=500, scale=1)
-
-    def on_results_created(self, results: ResultsWindow):
-        results_flow: Gtk.FlowBox = results.results.widget
-        result_item = results.results.builder.get_object("result_item")
-        # result_item.set_hexpand(False)
+        pix = PixmapManager(CACHE_DIR, pref_width=600, pref_height=500, scale=1)
+        self.source.pix_manager = pix
+        return pix
 
 
 class UnsplashFile(RemoteFile):
@@ -33,20 +27,19 @@ class UnsplashFile(RemoteFile):
     def __init__(self, remote, info, headers):
         super().__init__(remote, info)
         self.headers = headers
-        self.name = f"{self.info['name'][:7]}-{self.info['id']}-unsplash"
+        self.name = f"{self.info['name'][:7]}{self.info['id']}-unsplash"
+        self.file_name = self.name + ".jpg"
 
-    @property
-    def thumbnail(self):
+    def get_thumbnail(self):
         view_trigger = self.info["view_link"]
-        # self.remote.session.get(view_trigger, headers=self.headers)
-        name = self.name + ".jpg"
-        return self.remote.to_local_file(self.info["thumbnail"], name, self.headers)
+        self.remote.session.head(view_trigger, headers=self.headers)
+        return self.remote.to_local_file(self.info["thumbnail"], self.file_name, self.headers)
 
     def get_file(self):
         download_trigger = self.info["download_link"]
-        self.remote.session.get(download_trigger, headers=self.headers)
-        name = self.name + "file.jpg"
-        return self.remote.to_local_file(self.info["file"], name, self.headers)
+        self.remote.session.head(download_trigger, headers=self.headers)
+        return super().get_file()
+        # return self.remote.to_local_file(self.info["file"], self.file_name, self.headers)
 
 
 class UnsplashPage(RemotePage):
@@ -57,10 +50,10 @@ class UnsplashPage(RemotePage):
     def get_page_content(self):
         headers_list = {
             "Accept": "*/*",
-            "User-Agent": "Inkscape",
+            "User-Agent": "InkStock",
             "Content-Type": "application/json",
             "Accept-Version": "v1",
-            "Authorization": "Client-ID YsYs_gNo_yWWvaWHttBYA1i6YiDOeFkvioL3oZ0Y6ck"
+            "Authorization": KEYS["unsplash"]
         }
 
         params = {}
@@ -95,7 +88,8 @@ class UnsplashPage(RemotePage):
 
             for photo in json_response:
                 info = {
-                    "id": photo["id"], "width": photo["width"],
+                    "id": photo["id"],
+                    "width": photo["width"],
                     "height": photo["height"],
                     "url": photo["urls"]["full"],
                     "photographer": photo["user"]["name"],
@@ -107,16 +101,18 @@ class UnsplashPage(RemotePage):
                     "name": "" if not photo["description"] else photo["description"],
                     "view_link": photo["links"]["self"],
                     "download_link": photo["links"]["download"],
-                    "license": "Unsplash Licence"
+                    "license": "https://unsplash.com/license"
                 }
 
-                photos.append(UnsplashFile(self.remote_source, info, headers_list))
-            return photos
+                file = UnsplashFile(self.remote_source, info, headers_list)
+                yield file
+                # photos.append(file)
+            # return photos
         except Exception as err:
             print("Error trying to establish connection")
 
 
-class Unsplash(RemoteSource, ChangeReciever):
+class Unsplash(RemoteSource, OptionsChangeListener):
     name = "Unsplash"
     desc = "Unsplash is a website dedicated to sharing stock photography under the Unsplash license." \
            "Unsplash has over 265,000 contributing photographers and generates more than " \
@@ -127,11 +123,13 @@ class Unsplash(RemoteSource, ChangeReciever):
     is_default = False
     is_enabled = True
     items_per_page = 12
+    options_window_width = 350
     reqUrl = "https://api.unsplash.com/search/photos"
     window_cls = UnsplashWindow
+    source_type = SourceType.PHOTO
 
-    def __init__(self, cache_dir) -> None:
-        super().__init__(cache_dir)
+    def __init__(self, cache_dir, import_manager) -> None:
+        super().__init__(cache_dir, import_manager)
         self.query = ""
         # setting defaults
         self.options = {}
@@ -147,15 +145,16 @@ class Unsplash(RemoteSource, ChangeReciever):
             "all", "B & W", "black", "white", "orange", "yellow", "red",
             "purple", "magenta", "green", "teal", "blue"],
                                        OptionType.DROPDOWN, "Choose preferred color")
+        self.options_window.set_option("info", "", OptionType.TEXTVIEW, show_separator=False)
+        self.options_window.set_option("profile_link", "", OptionType.LINK, label="View Profile", attach=False)
 
-    @asyncme.run_or_none
     def get_page(self, page_no: int):
         self.current_page = page_no
         page = UnsplashPage(self, self.current_page, self.query)
         self.window.add_page(page)
 
     @asyncme.run_or_none
-    def search(self, query, tags=...):
+    def search(self, query):
         query = query.lower().replace(' ', '_')
         self.query = query
         self.window.clear_pages()
@@ -165,15 +164,24 @@ class Unsplash(RemoteSource, ChangeReciever):
 
     def on_window_attached(self, window: BasicWindow, window_pane):
         super().on_window_attached(window, window_pane)
-        window_pane.set_position(350)
         self.reqUrl = "https://api.unsplash.com/photos"
         self.query = ""
-        self.window.show_options_window(self.options_window.window)
-        self.window.show_spinner()
-        self.get_page(0)
+        asyncme.run_or_none(self.get_page)(0)
 
     def on_change(self, options):
+        self.query = options["query"]
         self.options = options
-        if self.query != options["query"]:
-            self.query = options["query"]
+        if self.window and self.query:
             self.search(self.query)
+
+    def file_selected(self, file: RemoteFile):
+        info = file.info
+        text = f'<span  size="large" weight="normal" >Photo by</span>\n\n' + \
+               f'<span  size="large" weight="bold" >{info["photographer"]}</span>\n\n' + \
+               (f'<span  size="medium" weight="normal" >{info["name"]}</span>\n\n' if info["name"] else '') + \
+               f'<span  size="medium" weight="normal" >Available under the UnSplash License, <a href="{info["license"]}">More Info</a></span>'
+        text.replace("&", "&amp;")
+        self.options_window.options["info"].view.set_markup(text)
+        if info["photographer_url"]:
+            self.options_window.attach_option("profile_link")
+            self.options_window.options["profile_link"].view.set_uri(info["photographer_url"])

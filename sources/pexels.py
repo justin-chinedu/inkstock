@@ -1,14 +1,14 @@
-from remote import RemoteFile, RemotePage, RemoteSource
-import json
-import sys
-from utils.constants import CACHE_DIR
-from inkex.gui.pixmap import PadFilter, PixmapManager, SizeFilter
+from core.utils import asyncme
+from keys import KEYS
+from sources.remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
+from core.constants import CACHE_DIR
+from core.gui.pixmap_manager import PixmapManager
 
 from windows.basic_window import BasicWindow
-from windows.options_window import ChangeReciever, OptionType, OptionsWindow
+from windows.options_window import OptionsChangeListener, OptionType, OptionsWindow
 
 
-class PexelsWindow(BasicWindow, ChangeReciever):
+class PexelsWindow(BasicWindow, OptionsChangeListener):
     name = "pexels_window"
 
     def __init__(self, gapp):
@@ -17,23 +17,20 @@ class PexelsWindow(BasicWindow, ChangeReciever):
         super().__init__(gapp)
 
     def get_pixmaps(self):
-        return PixmapManager(CACHE_DIR, pref_width=600, pref_height=500, scale=1)
+        pix = PixmapManager(CACHE_DIR, pref_width=600, pref_height=500, scale=1)
+        self.source.pix_manager = pix
+        return pix
 
 
 class PexelsFile(RemoteFile):
     def __init__(self, remote, info, headers):
         super().__init__(remote, info)
         self.headers = headers
-        self.name = f"{self.info['name'][:7]}-{self.info['id']}-pexels"
+        self.name = f"{self.info['name'][:7]}{self.info['id']}-pexels"
+        self.file_name = self.name + ".png"
 
-    @property
-    def thumbnail(self):
-        name = self.name + ".png"
-        return self.remote.to_local_file(self.info["thumbnail"], name, self.headers)
-
-    def get_file(self):
-        name = self.name + "file.png"
-        return self.remote.to_local_file(self.info["file"], name, self.headers)
+    def get_thumbnail(self):
+        return self.remote.to_local_file(self.info["thumbnail"], self.file_name, self.headers)
 
 
 class PexelsPage(RemotePage):
@@ -44,9 +41,9 @@ class PexelsPage(RemotePage):
     def get_page_content(self):
         headers_list = {
             "Accept": "*/*",
-            "User-Agent": "Inkscape",
+            "User-Agent": "InkStock",
             "Content-Type": "application/json",
-            "Authorization": "563492ad6f917000010000016afb431a4e284b808cfc571ba347c4eb"
+            "Authorization": KEYS["pexels"]
         }
 
         params = {}
@@ -65,6 +62,7 @@ class PexelsPage(RemotePage):
             response = self.remote_source.session.request(
                 "GET", self.remote_source.reqUrl, params=params, headers=headers_list)
             photos = []
+
             for photo in response.json()["photos"]:
                 info = {
                     "id": photo["id"],
@@ -78,16 +76,19 @@ class PexelsPage(RemotePage):
                     "thumbnail": photo["src"]["tiny"],
                     "file": photo["src"][self.remote_source.options["size"]],
                     "name": photo["alt"],
-                    "license": ""
+                    "license": "https://www.pexels.com/license/"
                 }
 
-                photos.append(PexelsFile(self.remote_source, info, headers_list))
-            return photos
-        except:
-            print("Error trying to establish connection")
+                file = PexelsFile(self.remote_source, info, headers_list)
+                yield file
+                # photos.append(file)
+            # return photos
+        except Exception as e:
+            print(str('Exception: ' + e))
+            return []
 
 
-class Pexels(RemoteSource, ChangeReciever):
+class Pexels(RemoteSource, OptionsChangeListener):
     name = "Pexels"
     desc = "Pexels is a provider of stock photography and stock footage. It was founded in Germany in 2014 and " \
            "maintains a library with over 3.2 million free stock photos and videos. "
@@ -99,27 +100,34 @@ class Pexels(RemoteSource, ChangeReciever):
     items_per_page = 12
     reqUrl = "https://api.pexels.com/v1/search"
     window_cls = PexelsWindow
+    source_type = SourceType.PHOTO
 
-    def __init__(self, cache_dir) -> None:
-        super().__init__(cache_dir)
+    def __init__(self, cache_dir, import_manager) -> None:
+        super().__init__(cache_dir, import_manager)
         self.query = ""
         # setting defaults
-        self.options = {}
+        self.options = {
+            "orientation": "landscape",
+            "size": "large"
+        }
         self.options_window = OptionsWindow(self)
         self.options_window.set_option("query", None, OptionType.SEARCH, "Search Pexels")
         self.options_window.set_option("orientation", [
             "landscape", "portrait", "square"], OptionType.DROPDOWN, "Choose orientation")
         self.options_window.set_option(
-            "size", ["large", "medium", "small"], OptionType.DROPDOWN, "Choose size of photo")
+            "size", ["large", "medium", "small"], OptionType.DROPDOWN, "Download size of photo")
         self.options_window.set_option(
             "color", None, OptionType.COLOR, "Choose preferred color")
+        self.options_window.set_option("info", "", OptionType.TEXTVIEW, show_separator=False)
+        self.options_window.set_option("profile_link", "", OptionType.LINK, label="View Profile", attach=False)
 
     def get_page(self, page_no: int):
         self.current_page = page_no
         page = PexelsPage(self, self.current_page, self.query)
         self.window.add_page(page)
 
-    def search(self, query, tags=...):
+    @asyncme.run_or_none
+    def search(self, query):
         query = query.lower().replace(' ', '_')
         self.query = query
         self.window.clear_pages()
@@ -129,15 +137,30 @@ class Pexels(RemoteSource, ChangeReciever):
 
     def on_window_attached(self, window: BasicWindow, window_pane):
         super().on_window_attached(window, window_pane)
-        window_pane.set_position(300)
         self.reqUrl = "https://api.pexels.com/v1/curated"
         self.query = ""
-        self.window.show_options_window(self.options_window.window)
-        self.window.show_spinner()
-        self.get_page(0)
+        asyncme.run_or_none(self.get_page)(0)
 
     def on_change(self, options):
-        self.options = options
-        if self.query != options["query"]:
-            self.query = options["query"]
+        if not self.window:
+            return
+
+        query = sanitize_query(options["query"])
+        # if search query changed
+        if query and self.query != query:
+            self.query = query
+            self.options = options
             self.search(self.query)
+            return
+
+    def file_selected(self, file: RemoteFile):
+        info = file.info
+        text = f'<span  size="large" weight="normal" >Photo by</span>\n\n' + \
+               f'<span  size="large" weight="bold" >{info["photographer"]}</span>\n\n' + \
+               (f'<span  size="medium" weight="normal" >{info["name"]}</span>\n\n' if info["name"] else '') + \
+               f'<span  size="medium" weight="normal" >Available under the Pexels License, <a href="{info["license"]}">More Info</a></span>'
+        text.replace("&", "&amp;")
+        self.options_window.options["info"].view.set_markup(text)
+        if info["photographer_url"]:
+            self.options_window.attach_option("profile_link")
+            self.options_window.options["profile_link"].view.set_uri(info["photographer_url"])
