@@ -9,6 +9,12 @@ class StopWatch:
     end = 0
     is_cancelled = False
 
+    def __init__(self):
+        self.elapsed = None
+        self.kwargs = None
+        self.args = None
+        self.func = None
+
     def start_or_reset(self, time_in_sec, func, *args, **kwargs):
         self.end = time_in_sec
         self.is_cancelled = False
@@ -16,7 +22,7 @@ class StopWatch:
         self.args = args
         self.kwargs = kwargs
         if self.is_running:
-            self.elasped = 0
+            self.elapsed = 0
         else:
             self.is_running = True
             self.begin_loop()

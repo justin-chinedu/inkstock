@@ -6,7 +6,7 @@ from pathlib import Path
 import requests
 
 from core.utils import asyncme
-from sources.remote import RemoteSource, RemoteFile
+from sources.remote import RemoteSource, RemoteFile, SourceType
 from gi.repository import Gtk
 
 from core.network.adapter import FileAdapter
@@ -251,6 +251,9 @@ class ImportManager(OptionsChangeListener):
         if os.path.exists(import_temp_dir):
             shutil.rmtree(import_temp_dir)
         for source, files in self.sources.items():
+            # importing font into Inkscape not supported yet
+            if source.source_type == SourceType.FONT:
+                continue
             path = os.path.join(import_temp_dir, source.source_type.value)
             if not os.path.exists(path):
                 os.makedirs(path)

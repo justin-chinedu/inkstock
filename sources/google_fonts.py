@@ -39,7 +39,7 @@ class GoogleFontsWindow(BasicWindow, OptionsChangeListener):
 class GoogleFontFile(FontFile):
     def __init__(self, remote, info):
         super().__init__(remote, info)
-        self.name = f"{self.info['name']}-google-fonts"
+        self.name = f"{self.info['name'].replace('.ttf', '')}-google-fonts"
         self.file_name = self.name + ".ttf"
 
     def get_thumbnail(self):
