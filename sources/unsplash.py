@@ -1,6 +1,6 @@
 from core.utils import asyncme
 from keys import KEYS
-from sources.remote import RemoteFile, RemotePage, RemoteSource, SourceType
+from sources.remote import RemoteFile, RemotePage, RemoteSource, SourceType, sanitize_query
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager
 
@@ -155,7 +155,6 @@ class Unsplash(RemoteSource, OptionsChangeListener):
 
     @asyncme.run_or_none
     def search(self, query):
-        query = query.lower().replace(' ', '_')
         self.query = query
         self.window.clear_pages()
         self.window.show_spinner()
@@ -169,10 +168,11 @@ class Unsplash(RemoteSource, OptionsChangeListener):
         asyncme.run_or_none(self.get_page)(0)
 
     def on_change(self, options):
-        self.query = options["query"]
+        self.query = sanitize_query(options["query"])
         self.options = options
         if self.window and self.query:
             self.search(self.query)
+            return
 
     def file_selected(self, file: RemoteFile):
         info = file.info

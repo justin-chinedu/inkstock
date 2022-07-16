@@ -224,4 +224,4 @@ class RemoteSource(ABC):
 
 
 def sanitize_query(query: str):
-    return query.lower().replace(' ', '_')
+    return query.lower().strip().replace(' ', '%20')

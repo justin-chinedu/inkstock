@@ -113,10 +113,16 @@ class SingleItemView:
         self.builder.connect_signals(window.handler)
         self.single_view.show()
 
+        self.index = None
+        self.length = None
+        self.children = None
+        self.selected_child = None
+
     @asyncme.mainloop_only
     def clear(self):
         def remove(child: Gtk.Widget):
             child.destroy()
+
         self.list.foreach(remove)
 
     def show_view(self):
@@ -176,7 +182,7 @@ class SingleItemView:
         child.style_prov = css_prov
         child.style_ctx.add_provider_for_screen(Gdk.Screen.get_default(), css_prov,
                                                 Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        # asyncme.run_or_none(os.remove)(pic_path)
+
         self.children[index] = child
         self.index += 1
 
@@ -198,6 +204,8 @@ class MultiItemView:
         self.multi_view = self.builder.get_object("results_multi_view")
         self.flow_box: Gtk.FlowBox = self.builder.get_object("results_flow")
         self.load_more_btn = self.builder.get_object("load_more_btn")
+        self.load_more_txt = self.builder.get_object("load_more_text")
+        self.load_more_spinner = self.builder.get_object("load_more_spinner")
         self.builder.connect_signals(window.handler)
         self.multi_view.show()
         self.index = 0
@@ -368,7 +376,7 @@ class ResultsHandler:
             self.current_page = next_page
 
             # TODO: Make other faster implementations
-            # Hide view button of any child ##Work around
+            # Hide view button of any child (Work around)
             # But might be very slow
             def hide(child):
                 if not child.is_selected():
