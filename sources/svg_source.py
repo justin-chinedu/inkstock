@@ -65,7 +65,6 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
         # proceed only when color values change
         if options["search_color"] != self.search_color:
             self.search_color = options["search_color"]
-            print(f"search color changed to {options['search_color']}")
             s = SvgColorReplace()
             s.new_fill_colors = {self.default_svg_color: options["search_color"]}
             s.is_active = True
@@ -152,7 +151,7 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
             if fill in modified_fill_colors.keys():
                 # TODO: Maybe try and convert hex to rgba before setting chooser color to support alpha
                 # i trimmed off alpha because Gtk color chooser doesn't support alpha in hex
-                displayed_fill = modified_fill_colors[fill][:-2]
+                displayed_fill = modified_fill_colors[fill][:-2]  # show modified fill instead of original fill
             color_option = self.options_window.set_option("fill_" + fill, displayed_fill, OptionType.COLOR,
                                                           f"Color {index + 1}",
                                                           attach=False, show_separator=False)

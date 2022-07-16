@@ -1,3 +1,5 @@
+import os
+
 from gi.repository import Gtk, Gdk
 
 from core.constants import CACHE_DIR, SOURCES
@@ -20,7 +22,7 @@ class ListBoxRowWithData(Gtk.ListBoxRow):
         self.add(Gtk.Label(label=name))
 
 
-class InkStocksWindow(Window):
+class InkStockWindow(Window):
     name = "inkstocks_window"
     primary = True
 
@@ -47,9 +49,12 @@ class InkStocksWindow(Window):
 
         RemoteSource.load(SOURCES)
 
+        if not os.path.exists(CACHE_DIR):
+            os.mkdir(CACHE_DIR)
         self.sources_pixmanager = PixmapManager(CACHE_DIR, scale=3, pref_width=150,
                                                 pref_height=150, padding=40, aspect_ratio=SIZE_ASPECT_GROW, )
         self.import_manager = ImportManager(self)
+
         self.sources = [source(CACHE_DIR, self.import_manager) for source in RemoteSource.sources.values()]
         self.sources_lists.show_all()
         self.sources_results = []

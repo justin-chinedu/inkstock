@@ -40,5 +40,5 @@ task_thread.start()
 class Task:
     is_active = False
 
-    def do_task(self, filepath) -> str:
+    async def do_task(self, filepath) -> str:
         return filepath

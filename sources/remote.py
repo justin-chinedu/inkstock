@@ -111,6 +111,7 @@ class RemoteSource(ABC):
         self.options_window = None
         self.session = requests.session()
         self.cache_dir = cache_dir
+
         self.session.mount(
             "https://",
             CacheControlAdapter(

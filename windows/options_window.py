@@ -157,7 +157,7 @@ class ColorOption(Option):
     def color_set(self, button: Gtk.ColorButton):
         rgba = button.get_rgba()
         color_rgba = tuple(map(lambda x: round(x * 255), (rgba.red, rgba.green, rgba.blue, rgba.alpha)))
-        color_hex = '#{:02x}{:02x}{:02x}{:02x}'.format(*color_rgba)
+        color_hex = '#{:02x}{:02x}{:02x}'.format(*color_rgba)
         self.value = color_hex
         self.receiver.on_change(self)
 

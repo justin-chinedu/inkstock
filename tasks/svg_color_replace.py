@@ -75,7 +75,10 @@ class SvgColorReplace(Task):
             if new_color:
                 if etree.QName(element).localname in self.element_types1:
                     element.attrib[attrib] = new_color
-                elif etree.QName(element).localname in self.element_types2 and element.get("style"):
-                    styles = list(filter(lambda s: "fill:" not in s, element.get("style").split(";")))
-                    styles.append(f"{attrib}:{new_color}")
-                    element.attrib["style"] = ";".join(styles)
+                elif etree.QName(element).localname in self.element_types2:
+                    if element.get("style"):
+                        styles = list(filter(lambda s: "fill:" not in s, element.get("style").split(";")))
+                        styles.append(f"{attrib}:{new_color}")
+                        element.attrib["style"] = ";".join(styles)
+                    else:
+                        element.attrib["style"] = f"{attrib}:{new_color}"

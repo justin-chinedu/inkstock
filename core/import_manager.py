@@ -16,9 +16,9 @@ from windows.import_window import ImportWindow, ImportItem
 from windows.options_window import OptionsWindow, OptionType, OptionsChangeListener
 
 
-def apply_tasks_to_file(file: RemoteFile, file_path: str):
+async def apply_tasks_to_file(file: RemoteFile, file_path: str):
     for task in file.tasks:
-        task.do_task(file_path)
+        await task.do_task(file_path)
 
 
 class ImportManager(OptionsChangeListener):
@@ -31,6 +31,7 @@ class ImportManager(OptionsChangeListener):
         self.sources: dict[RemoteSource, set[RemoteFile]] = {}
 
         self.ink_window = ink_window
+        self.ink_ext = self.ink_window.gapp.ext
         self.files_saved: dict[RemoteSource, set] = {}
         self.files: dict[RemoteSource, set] = {}
         self.session = requests.session()
@@ -72,8 +73,9 @@ class ImportManager(OptionsChangeListener):
                                                        list(map(lambda x: x.name + f" ({len(self.sources[x])})",
                                                                 self.sources.keys())), OptionType.SELECT,
                                                        show_separator=False)
-        self.options_window.set_option("import_all", self.import_all, OptionType.BUTTON,
-                                       "Import all", show_separator=False)
+        if self.ink_ext:
+            self.options_window.set_option("import_all", self.import_all, OptionType.BUTTON,
+                                           "Import into Inkscape", show_separator=False)
         self.options_window.set_option("import_zip", self.show_zip_dialog, OptionType.BUTTON,
                                        "Save as zip", show_separator=False)
         self.options_window.set_option("back_to_sources", self.back_to_sources, OptionType.BUTTON,
@@ -181,8 +183,8 @@ class ImportManager(OptionsChangeListener):
 
         asyncio.run_coroutine_threadsafe(add_task_to_queue(self.import_zip, cb, filename), loop=task_loop)
 
-    async def import_zip(self, filename):
-        basename = Path(filename).stem
+    async def import_zip(self, save_filename):
+        basename = Path(save_filename).stem
         temp_dir = os.path.join(CACHE_DIR, basename)
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
@@ -191,8 +193,8 @@ class ImportManager(OptionsChangeListener):
             if not os.path.exists(path):
                 os.makedirs(path)
             for file in files:
-                self.download(file, os.path.join(path, file.file_name))
-        save_dir = os.path.dirname(filename)
+                await self.download(file, os.path.join(path, file.file_name))
+        save_dir = os.path.dirname(save_filename)
         shutil.make_archive(os.path.join(save_dir, basename), "zip", root_dir=temp_dir)
         shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -205,7 +207,7 @@ class ImportManager(OptionsChangeListener):
             self.window.window.set_sensitive(False)
             self.window.window.set_opacity(0.5)
 
-    def download(self, file, file_path):
+    async def download(self, file, file_path):
         url = file.get_file()
         name = os.path.basename(file_path)
         bytes_downloaded = 0
@@ -218,7 +220,7 @@ class ImportManager(OptionsChangeListener):
                     out.write(data)
                     self.show_progress(bytes_downloaded, total, name)
 
-        apply_tasks_to_file(file, file_path)
+        await apply_tasks_to_file(file, file_path)
 
     @asyncme.mainloop_only
     def show_progress(self, bytes_downloaded, total, name):
@@ -234,4 +236,27 @@ class ImportManager(OptionsChangeListener):
             self.ink_window.progress.pulse()
 
     def import_all(self, name):
-        pass
+        self.set_window_sensitive(False)
+
+        def cb(result, error):
+            if error:
+                print(f"Error occurred during import: {error}")
+            self.set_window_sensitive(True)
+            asyncme.mainloop_only(self.ink_window.progress.hide)()
+
+        asyncio.run_coroutine_threadsafe(add_task_to_queue(self.import_into_inkscape, cb), loop=task_loop)
+
+    async def import_into_inkscape(self):
+        import_temp_dir = os.path.join(CACHE_DIR, "import_tmp")
+        if os.path.exists(import_temp_dir):
+            shutil.rmtree(import_temp_dir)
+        for source, files in self.sources.items():
+            path = os.path.join(import_temp_dir, source.source_type.value)
+            if not os.path.exists(path):
+                os.makedirs(path)
+            for file in files:
+                file_to_import = os.path.join(path, file.file_name)
+                await self.download(file, file_to_import)
+                self.show_progress(None, None, f" Importing {file.file_name}...")
+                self.ink_ext.import_from_file(file_to_import)
+            shutil.rmtree(import_temp_dir, ignore_errors=True)
