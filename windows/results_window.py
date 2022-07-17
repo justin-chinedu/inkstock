@@ -2,7 +2,7 @@ import gi
 from core.utils import asyncme
 from core.gui.window import ChildWindow
 from core.constants import CACHE_DIR
-from sources.remote import RemoteFile, RemotePage, RemoteSource
+from sources.source import RemoteFile, RemotePage, RemoteSource
 from core.gui.pixmap_manager import PixmapManager
 from windows.view_change_listener import ViewChangeListener
 

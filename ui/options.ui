@@ -1,252 +1,245 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Generated with glade 3.38.2 -->
 <interface>
-    <requires lib="gtk+" version="3.24"/>
-    <object class="GtkButton" id="options_button">
-        <property name="label" translatable="yes">button</property>
+  <requires lib="gtk+" version="3.24"/>
+  <object class="GtkButton" id="options_button">
+    <property name="label" translatable="yes">button</property>
+    <property name="name">options_button</property>
+    <property name="visible">True</property>
+    <property name="can-focus">True</property>
+    <property name="receives-default">True</property>
+    <property name="relief">half</property>
+    <signal name="clicked" handler="on_click" swapped="no"/>
+  </object>
+  <object class="GtkFlowBox" id="options_checkbox_flow">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="homogeneous">True</property>
+    <property name="column-spacing">10</property>
+    <property name="row-spacing">10</property>
+    <property name="max-children-per-line">2</property>
+    <property name="selection-mode">none</property>
+    <property name="activate-on-single-click">False</property>
+  </object>
+  <object class="GtkBox" id="options_color">
+    <property name="width-request">40</property>
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="spacing">10</property>
+    <child>
+      <object class="GtkLabel" id="options_color_label">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="label" translatable="yes">Select a color</property>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">0</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkColorButton" id="options_color_btn">
         <property name="visible">True</property>
         <property name="can-focus">True</property>
         <property name="receives-default">True</property>
-        <property name="relief">none</property>
-        <signal name="clicked" handler="on_click" swapped="no"/>
-        <style>
-            <class name="options_button"/>
-        </style>
-    </object>
-    <object class="GtkFlowBox" id="options_checkbox_flow">
+        <property name="use-alpha">True</property>
+        <property name="title" translatable="yes">Select a color</property>
+        <signal name="color-set" handler="color_set" swapped="no"/>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+  </object>
+  <object class="GtkBox" id="options_dropdown">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="spacing">10</property>
+    <child>
+      <object class="GtkLabel" id="options_dropdown_label">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
-        <property name="homogeneous">True</property>
-        <property name="column-spacing">10</property>
-        <property name="row-spacing">10</property>
-        <property name="max-children-per-line">2</property>
-        <property name="selection-mode">none</property>
-        <property name="activate-on-single-click">False</property>
-    </object>
-    <object class="GtkBox" id="options_color">
-        <property name="width-request">40</property>
+        <property name="label" translatable="yes">label</property>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">0</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkComboBoxText" id="options_dropdown_combobox">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
-        <property name="spacing">10</property>
-        <child>
-            <object class="GtkLabel" id="options_color_label">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="label" translatable="yes">Select a color</property>
-            </object>
-            <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-            </packing>
-        </child>
-        <child>
-            <object class="GtkColorButton" id="options_color_btn">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="receives-default">True</property>
-                <property name="use-alpha">True</property>
-                <property name="title" translatable="yes">Select a color</property>
-                <signal name="color-set" handler="color_set" swapped="no"/>
-            </object>
-            <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-            </packing>
-        </child>
-    </object>
-    <object class="GtkBox" id="options_dropdown">
+        <property name="active">0</property>
+        <signal name="changed" handler="changed" swapped="no"/>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+  </object>
+  <object class="GtkExpander" id="options_group">
+    <property name="name">options_group</property>
+    <property name="visible">True</property>
+    <property name="can-focus">True</property>
+    <property name="label-fill">True</property>
+    <child>
+      <object class="GtkRevealer">
+        <property name="height-request">300</property>
         <property name="visible">True</property>
         <property name="can-focus">False</property>
-        <property name="spacing">10</property>
+        <property name="transition-duration">500</property>
+        <property name="reveal-child">True</property>
         <child>
-            <object class="GtkLabel" id="options_dropdown_label">
+          <object class="GtkScrolledWindow">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="margin-top">10</property>
+            <child>
+              <object class="GtkViewport">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes">label</property>
-            </object>
-            <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-            </packing>
-        </child>
-        <child>
-            <object class="GtkComboBoxText" id="options_dropdown_combobox">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="active">0</property>
-                <signal name="changed" handler="changed" swapped="no"/>
-            </object>
-            <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-            </packing>
-        </child>
-    </object>
-    <object class="GtkExpander" id="options_group">
-        <property name="name">options_group</property>
-        <property name="visible">True</property>
-        <property name="can-focus">True</property>
-        <property name="label-fill">True</property>
-        <child>
-            <object class="GtkRevealer">
-                <property name="height-request">300</property>
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="transition-duration">500</property>
-                <property name="reveal-child">True</property>
                 <child>
-                    <object class="GtkScrolledWindow">
-                        <property name="visible">True</property>
-                        <property name="can-focus">True</property>
-                        <property name="margin-top">10</property>
-                        <child>
-                            <object class="GtkViewport">
-                                <property name="visible">True</property>
-                                <property name="can-focus">False</property>
-                                <child>
-                                    <object class="GtkListBox" id="options_group_list">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="margin-start">30</property>
-                                        <property name="margin-top">10</property>
-                                        <property name="margin-bottom">10</property>
-                                        <property name="selection-mode">none</property>
-                                        <property name="activate-on-single-click">False</property>
-                                        <style>
-                                            <class name="options"/>
-                                        </style>
-                                    </object>
-                                </child>
-                            </object>
-                        </child>
-                    </object>
+                  <object class="GtkBox" id="options_group_list">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-top">10</property>
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <placeholder/>
+                    </child>
+                  </object>
                 </child>
-            </object>
+              </object>
+            </child>
+          </object>
         </child>
-        <child type="label">
-            <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="label" translatable="yes">expander</property>
-            </object>
-        </child>
-    </object>
-    <object class="GtkLinkButton" id="options_link">
-        <property name="label" translatable="yes">button</property>
-        <property name="visible">True</property>
-        <property name="can-focus">True</property>
-        <property name="receives-default">True</property>
-        <style>
-            <class name="options_button"/>
-        </style>
-    </object>
-    <object class="GtkListBox" id="options_listbox">
+      </object>
+    </child>
+    <child type="label">
+      <object class="GtkLabel">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
-        <property name="margin-start">15</property>
-        <property name="margin-end">15</property>
-        <property name="margin-top">30</property>
-        <property name="hexpand">False</property>
-        <property name="selection-mode">none</property>
-        <property name="activate-on-single-click">False</property>
-        <style>
-            <class name="options"/>
-        </style>
-    </object>
-    <object class="GtkBox" id="options_search">
-        <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <property name="orientation">vertical</property>
-        <property name="spacing">10</property>
-        <child>
-            <object class="GtkLabel" id="options_search_label">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="halign">start</property>
-                <property name="label" translatable="yes">label</property>
-            </object>
-            <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-            </packing>
-        </child>
-        <child>
-            <object class="GtkSearchEntry" id="options_searchentry">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="hexpand">True</property>
-                <property name="primary-icon-name">edit-find-symbolic</property>
-                <property name="primary-icon-activatable">False</property>
-                <property name="primary-icon-sensitive">False</property>
-                <property name="placeholder-text" translatable="yes">Search</property>
-                <property name="show-emoji-icon">True</property>
-                <signal name="activate" handler="search_changed" swapped="no"/>
-            </object>
-            <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-            </packing>
-        </child>
-    </object>
-    <object class="GtkListBox" id="options_select_list">
-        <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <style>
-            <class name="options_select_list"/>
-        </style>
-    </object>
-    <object class="GtkSeparator" id="options_separator">
-        <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <property name="margin-top">10</property>
-        <property name="margin-bottom">10</property>
-    </object>
-    <object class="GtkBox" id="options_textfield">
-        <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <property name="orientation">vertical</property>
-        <property name="spacing">10</property>
-        <child>
-            <object class="GtkLabel" id="options_textfield_label">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="halign">start</property>
-                <property name="label" translatable="yes">label</property>
-            </object>
-            <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-            </packing>
-        </child>
-        <child>
-            <object class="GtkEntry" id="options_textfield_entry">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <signal name="changed" handler="changed" swapped="no"/>
-            </object>
-            <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-            </packing>
-        </child>
-    </object>
-    <object class="GtkLabel" id="options_textview">
+        <property name="label" translatable="yes">expander</property>
+      </object>
+    </child>
+  </object>
+  <object class="GtkLinkButton" id="options_link">
+    <property name="label" translatable="yes">button</property>
+    <property name="name">options_link</property>
+    <property name="visible">True</property>
+    <property name="can-focus">True</property>
+    <property name="receives-default">True</property>
+  </object>
+  <object class="GtkListBox" id="options_listbox">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="margin-start">15</property>
+    <property name="margin-end">15</property>
+    <property name="margin-top">30</property>
+    <property name="hexpand">False</property>
+    <property name="selection-mode">none</property>
+    <property name="activate-on-single-click">False</property>
+    <style>
+      <class name="options"/>
+    </style>
+  </object>
+  <object class="GtkBox" id="options_search">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="orientation">vertical</property>
+    <property name="spacing">10</property>
+    <child>
+      <object class="GtkLabel" id="options_search_label">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
         <property name="halign">start</property>
-        <property name="use-markup">True</property>
-        <property name="wrap">True</property>
-        <property name="ellipsize">end</property>
-        <property name="width-chars">20</property>
-        <property name="max-width-chars">20</property>
-        <property name="lines">3</property>
-    </object>
+        <property name="label" translatable="yes">label</property>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">0</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkSearchEntry" id="options_searchentry">
+        <property name="name">options_searchentry</property>
+        <property name="visible">True</property>
+        <property name="can-focus">True</property>
+        <property name="hexpand">True</property>
+        <property name="primary-icon-name">edit-find-symbolic</property>
+        <property name="primary-icon-activatable">False</property>
+        <property name="primary-icon-sensitive">False</property>
+        <property name="placeholder-text" translatable="yes">Search</property>
+        <signal name="activate" handler="search_changed" swapped="no"/>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+  </object>
+  <object class="GtkListBox" id="options_select_list">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <style>
+      <class name="options_select_list"/>
+    </style>
+  </object>
+  <object class="GtkSeparator" id="options_separator">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="margin-top">10</property>
+    <property name="margin-bottom">10</property>
+  </object>
+  <object class="GtkBox" id="options_textfield">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="orientation">vertical</property>
+    <property name="spacing">10</property>
+    <child>
+      <object class="GtkLabel" id="options_textfield_label">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="halign">start</property>
+        <property name="label" translatable="yes">label</property>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">0</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkEntry" id="options_textfield_entry">
+        <property name="visible">True</property>
+        <property name="can-focus">True</property>
+        <signal name="changed" handler="changed" swapped="no"/>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+  </object>
+  <object class="GtkLabel" id="options_textview">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="halign">start</property>
+    <property name="use-markup">True</property>
+    <property name="wrap">True</property>
+    <property name="ellipsize">end</property>
+    <property name="width-chars">20</property>
+    <property name="max-width-chars">20</property>
+    <property name="lines">3</property>
+  </object>
 </interface>

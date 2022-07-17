@@ -6,7 +6,7 @@ from core.constants import CACHE_DIR, SOURCES
 from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_GROW
 from core.gui.window import Window
 from core.import_manager import ImportManager
-from sources.remote import RemoteSource
+from sources.source import RemoteSource
 
 
 class ListBoxRowWithData(Gtk.ListBoxRow):

@@ -1,4 +1,4 @@
-from sources.remote import RemoteFile
+from sources.source import RemoteFile
 
 
 class FontFile(RemoteFile):

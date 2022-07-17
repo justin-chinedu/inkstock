@@ -4,7 +4,7 @@ import os
 from os.path import exists
 
 from core.utils import asyncme
-from sources.remote import RemotePage, RemoteSource, SourceType
+from sources.source import RemotePage, RemoteSource, SourceType
 from sources.font_file import FontFile
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_CROP

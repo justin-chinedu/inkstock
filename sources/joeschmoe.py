@@ -11,7 +11,7 @@ from windows.options_window import OptionType
 sys.path.insert(
     1, '/home/justin/inkscape-dev/inkscape/inkscape-data/inkscape/extensions/other/inkstock')
 
-from sources.remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
+from sources.source import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
 
 
 class JoeschmoeWindow(BasicWindow):

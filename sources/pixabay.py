@@ -1,6 +1,6 @@
 from core.utils import asyncme
 from keys import KEYS
-from sources.remote import RemoteFile, RemotePage, RemoteSource, SourceType, sanitize_query
+from sources.source import RemoteFile, RemotePage, RemoteSource, SourceType, sanitize_query
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager
 

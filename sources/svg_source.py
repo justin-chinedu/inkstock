@@ -7,7 +7,7 @@ from gi.repository import Gtk
 
 import tasks.task
 from core.utils import asyncme
-from sources.remote import RemoteSource, RemoteFile, sanitize_query
+from sources.source import RemoteSource, RemoteFile, sanitize_query
 from tasks.svg_color_replace import SvgColorReplace
 from tasks.task import task_loop
 from windows.basic_window import BasicWindow

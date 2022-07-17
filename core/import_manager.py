@@ -6,7 +6,7 @@ from pathlib import Path
 import requests
 
 from core.utils import asyncme
-from sources.remote import RemoteSource, RemoteFile, SourceType
+from sources.source import RemoteSource, RemoteFile, SourceType
 from gi.repository import Gtk
 
 from core.network.adapter import FileAdapter

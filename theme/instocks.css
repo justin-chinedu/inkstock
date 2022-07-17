@@ -1,13 +1,12 @@
 window flowbox > flowboxchild {
     background-color: white;
     color: black;
-    box-shadow: 5px 5px 5px 2px #000000cd;
     outline-style: none;
     border-radius: 5%;
 }
 
 window flowbox > flowboxchild:selected {
-    background-color: #29A3AF;
+    background-color: #88a867;
     padding: 5px;
 }
 
@@ -16,41 +15,49 @@ window flowbox > flowboxchild * {
 }
 
 #import_cancel{
-  border-radius: 50%;
+  border-radius: 55%;
 }
 
-.view_image{
+#view_image_btn{
     border-style: solid;
-    background: #29A3AF;
+    background: #88a867;
     color: white;
     border: none;
-    border-radius: 0px;
+    border-radius: 0px 0px 10px 10px;
 }
 
 .result_text{
-    background-color: white;
     padding: 2px;
     border: none;
     border-radius: 0% 0% 10% 10%;
 }
 
-.options:not(listbox){
-    background-color: transparent;
-    outline-style: none;
-  }
+
 
 /*.options :hover{
     background: none;
   }*/
 
 
-.options_button * {
-     background-color: #3F3F3F;
+#options_link * {
+     background-color: #88a867;
      color: white;
-     margin-top: 15px;
-     padding: 10px;
+     margin-top: 16px;
+     margin-bottom: 16px;
+     padding-top: 12px;
+     padding-bottom: 12px;
      text-decoration-color: white;
      text-decoration-line: none;
+ }
+
+ #options_button{
+    margin-top: 12px;
+    margin-bottom: 12px;
+    padding: 8px;
+ }
+
+ #options_searchentry{
+    padding: 8px;
  }
 
  .transparent {

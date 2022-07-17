@@ -3,7 +3,7 @@ import os
 import uuid
 
 from core.utils import asyncme
-from sources.remote import RemoteFile, RemotePage, RemoteSource, SourceType
+from sources.source import RemoteFile, RemotePage, RemoteSource, SourceType
 from tasks.svg_color_replace import SvgColorReplace
 from tasks.task import task_loop, add_task_to_queue
 from core.utils.color_palette import gen_svg_palette, gen_random_svg_palette
@@ -120,7 +120,7 @@ class ColorMindPalettesSource(RemoteSource, ViewChangeListener):
     source_type = SourceType.SWATCH
     file_cls = ColorMindPalette
     page_cls = ColorMindPalettesPage
-    is_default = True
+    is_default = False
     is_enabled = True
     options_window_width = 300
     items_per_page = 12

@@ -73,10 +73,11 @@
         <property name="can-focus">False</property>
         <child>
           <object class="GtkButton" id="view_image_btn">
+            <property name="name">view_image_btn</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
             <property name="valign">end</property>
-            <property name="relief">half</property>
+            <property name="relief">none</property>
             <property name="always-show-image">True</property>
             <child>
               <object class="GtkBox">
@@ -112,9 +113,6 @@
                 </child>
               </object>
             </child>
-            <style>
-              <class name="view_image"/>
-            </style>
           </object>
           <packing>
             <property name="name">page0</property>

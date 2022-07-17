@@ -1,7 +1,7 @@
 import os
 
 from core.gui.app import GtkApp
-from sources.remote import RemoteSource
+from sources.source import RemoteSource
 from windows.import_window import ImportWindow, ImportResults
 from windows.inkstocks_window import InkStockWindow
 from windows.results_window import ResultsWindow

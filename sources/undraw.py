@@ -1,6 +1,6 @@
 import json
 
-from sources.remote import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
+from sources.source import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
 from sources.svg_source import SvgSource
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_GROW

@@ -10,7 +10,7 @@ class OptionsChangeListener:
 
 
 class OptionsWindow(OptionsChangeListener):
-    ui_file = "ui/options.ui"
+    ui_file = "ui/options_window.ui"
 
     def __init__(self, change_receiver):
         self.builder = Gtk.Builder()
@@ -18,10 +18,18 @@ class OptionsWindow(OptionsChangeListener):
         self.options = {}
         self.__attached_options = []
         self.receiver = change_receiver
-        self.builder.add_objects_from_file(self.ui_file, ["options_listbox", "options_separator"])
-        self.window: Gtk.ListBox = self.builder.get_object("options_listbox")
-        self.window.set_hexpand(True)
+
+        # self.builder.add_objects_from_file(self.ui_file, ["options_listbox", "options_separator"])
+        # self.window: Gtk.ListBox = self.builder.get_object("options_listbox")
+
+        self.builder.add_from_file(self.ui_file)
+        self.window: Gtk.ScrolledWindow = self.builder.get_object("options_scroll")
         self.window.show_all()
+        self.box: Gtk.Box = self.window.get_child().get_child()
+        # self.window.set_hexpand(True)
+
+    def __add__widget(self, widget):
+        self.box.pack_start(widget, False, False, 0)
 
     def set_option(self, name, values, option_type, label=None, show_separator=True, attach=True):
         if option_type == OptionType.CHECKBOX:
@@ -52,13 +60,13 @@ class OptionsWindow(OptionsChangeListener):
 
         option.view.set_hexpand(False)
         if attach and not show_separator:
-            self.window.add(option.view)
+            self.__add__widget(option.view)
             self.__attached_options.append(option)
         if show_separator and attach:
-            self.window.add(option.view)
+            self.__add__widget(option.view)
             self.__attached_options.append(option)
             separator = self.get_separator()
-            self.window.add(separator)
+            self.__add__widget(separator)
 
         self.options[name] = option
         self.options_values[name] = option.value
@@ -67,7 +75,7 @@ class OptionsWindow(OptionsChangeListener):
 
     def get_separator(self):
         builder = Gtk.Builder()
-        builder.add_objects_from_file(self.ui_file, ["options_separator"])
+        builder.add_objects_from_file("ui/options.ui", ["options_separator"])
         separator: Gtk.Separator = builder.get_object("options_separator")
         separator.set_hexpand(False)
         return separator
@@ -88,7 +96,7 @@ class OptionsWindow(OptionsChangeListener):
         if name in self.options:
             option = self.options[name]
             if option in self.__attached_options:
-                asyncme.mainloop_only(self.window.remove)(option.view.get_parent())
+                asyncme.mainloop_only(self.box.remove)(option.view)
                 if isinstance(option, Group):
                     for value in option.values:
                         self.__attached_options.remove(value)
@@ -98,7 +106,7 @@ class OptionsWindow(OptionsChangeListener):
         if name in self.options:
             option = self.options[name]
             if option not in self.__attached_options:
-                asyncme.mainloop_only(self.window.add)(option.view)
+                asyncme.mainloop_only(self.__add__widget)(option.view)
                 if isinstance(option, Group):
                     for value in option.values:
                         self.__attached_options.append(value)
@@ -248,8 +256,9 @@ class Group(Option):
             self.add_option(option)
 
     def add_option(self, option):
-        self.group_list.add(option.view)
-        self.group_list.add(self.get_separator())
+        self.group_list.show()
+        self.group_list.pack_start(option.view, False, False, 0)
+        self.group_list.pack_start(self.get_separator(), False, False, 0)
 
     def get_separator(self):
         builder = Gtk.Builder()

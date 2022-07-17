@@ -96,7 +96,7 @@ button.gtkstyle-fallback:active, button.gtkstyle-fallback:checked {
 }
 
 .view:selected:hover, iconview:selected:hover {
-  background-color: #88a867;
+  background-color:  ;
 }
 
 textview, textview.view {
