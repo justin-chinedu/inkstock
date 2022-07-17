@@ -28,10 +28,18 @@ class InkStockWindow(Window):
 
     def __init__(self, gapp):
         super().__init__(gapp)
-        css = """
+        settings = Gtk.Settings.get_default()
+        settings.connect("notify::gtk-theme-name", self._on_theme_name_changed)
+        self.app_css_dark = """
+         @import url("theme/Matcha/gtk/gtk-3.0/gtk-dark-pueril.css");
          @import url("theme/instocks.css");
         """
-        self.load_css(css)
+        self.app_css_light = """
+         @import url("theme/Matcha/gtk/gtk-3.0/gtk-light-pueril.css");
+         @import url("theme/instocks.css");
+        """
+        self._on_theme_name_changed(settings, None)
+
         self.import_files_btn: Gtk.Button = self.widget('import_files_btn')
         self.import_files_btn.set_sensitive(False)
         self.source_title = self.widget('source_title')
@@ -47,7 +55,7 @@ class InkStockWindow(Window):
         self.signal_handler = MainHandler(self)
         self.w_tree.connect_signals(self.signal_handler)
 
-        RemoteSource.load(SOURCES)
+        #RemoteSource.load(SOURCES)
 
         if not os.path.exists(CACHE_DIR):
             os.mkdir(CACHE_DIR)
@@ -78,6 +86,13 @@ class InkStockWindow(Window):
         self.sources_lists.select_row(
             self.sources_lists.get_row_at_index(default_source_index))
 
+    def _on_theme_name_changed(self, settings, _):
+        name = settings.get_property("gtk-theme-name").lower()
+        if "dark" in name:
+            self.load_css(self.app_css_dark)
+        else:
+            self.load_css(self.app_css_light)
+
     @staticmethod
     def load_css(data: str):
         css_prov = Gtk.CssProvider()
@@ -85,7 +100,7 @@ class InkStockWindow(Window):
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(),
             css_prov,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+            Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
     def import_files(self, *args):
         self.add_and_show_import_window()

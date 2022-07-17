@@ -5,6 +5,7 @@ from sources.remote import RemoteSource
 from windows.import_window import ImportWindow, ImportResults
 from windows.inkstocks_window import InkStockWindow
 from windows.results_window import ResultsWindow
+from gi.repository import Gtk, GLib
 
 
 class InkStockApp(GtkApp):
