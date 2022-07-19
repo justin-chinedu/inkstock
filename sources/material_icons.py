@@ -38,8 +38,8 @@ class MaterialWindow(BasicWindow):
 
 
 class MaterialIcon(RemoteFile):
-    def __init__(self, remote, info):
-        super().__init__(remote, info)
+    def __init__(self, source, info):
+        super().__init__(source, info)
         self.name = f"{self.info['name']}-material"
         self.file_name = self.name + ".svg"
         self.show_name = True

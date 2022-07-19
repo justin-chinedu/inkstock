@@ -1,17 +1,18 @@
 import asyncio
+import inspect
 import os
 import shutil
+from asyncio import Queue
 from pathlib import Path
+from threading import Thread
 
 import requests
-
-from core.utils import asyncme
-from sources.source import RemoteSource, RemoteFile, SourceType
 from gi.repository import Gtk
 
-from core.network.adapter import FileAdapter
 from core.constants import CACHE_DIR
-from tasks.task import add_task_to_queue, task_loop
+from core.network.adapter import FileAdapter
+from core.utils import asyncme
+from sources.source import RemoteSource, RemoteFile, SourceType
 from windows.import_window import ImportWindow, ImportItem
 from windows.options_window import OptionsWindow, OptionType, OptionsChangeListener
 
@@ -45,6 +46,36 @@ class ImportManager(OptionsChangeListener):
         # ====== Options Window ========= #
         self.options_window = OptionsWindow(self)
         self.options_window.set_option("sources", "Sources to import from", OptionType.TEXTVIEW)
+
+        # start async tasks queue in background thread
+        self.download_task_queue: Queue = None
+        self.download_task_loop = asyncio.new_event_loop()
+        task_thread = Thread(target=self.start_background_loop, daemon=True)
+        task_thread.start()
+        while not self.download_task_loop.is_running():
+            pass  # simply waiting loop to start
+
+    def start_background_loop(self) -> None:
+        asyncio.set_event_loop(self.download_task_loop)
+        self.download_task_queue = Queue()
+        self.download_task_loop.run_until_complete(self.consume_task())
+
+    def add_task_to_queue(self, fn, callback, *args, **kwargs):
+        asyncio.run_coroutine_threadsafe(self.download_task_queue.put((fn, callback, args, kwargs)),
+                                         loop=self.download_task_loop)
+
+    async def consume_task(self):
+        while True:
+            fn, callback, args, kwargs = await self.download_task_queue.get()
+            try:
+                if inspect.iscoroutinefunction(fn):
+                    result = await fn(*args, **kwargs)
+                else:
+                    result = fn(*args, **kwargs)
+                callback(result=result, error=None)
+            except Exception as err:
+                callback(result=None, error=err)
+            self.download_task_queue.task_done()
 
     def show_window(self):
         # Merge saved files and temporarily selected files together
@@ -181,7 +212,7 @@ class ImportManager(OptionsChangeListener):
             self.set_window_sensitive(True)
             asyncme.mainloop_only(self.ink_window.progress.hide)()
 
-        asyncio.run_coroutine_threadsafe(add_task_to_queue(self.import_zip, cb, filename), loop=task_loop)
+        self.add_task_to_queue(self.import_zip, cb, filename)
 
     async def import_zip(self, save_filename):
         basename = Path(save_filename).stem
@@ -244,7 +275,7 @@ class ImportManager(OptionsChangeListener):
             self.set_window_sensitive(True)
             asyncme.mainloop_only(self.ink_window.progress.hide)()
 
-        asyncio.run_coroutine_threadsafe(add_task_to_queue(self.import_into_inkscape, cb), loop=task_loop)
+        self.add_task_to_queue(self.import_into_inkscape, cb)
 
     async def import_into_inkscape(self):
         import_temp_dir = os.path.join(CACHE_DIR, "import_tmp")

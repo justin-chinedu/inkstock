@@ -1,14 +1,12 @@
-import asyncio
 import os
 import uuid
 
-from core.utils import asyncme
-from sources.source import RemoteFile, RemotePage, RemoteSource, SourceType
-from tasks.svg_color_replace import SvgColorReplace
-from tasks.task import task_loop, add_task_to_queue
-from core.utils.color_palette import gen_svg_palette, gen_random_svg_palette
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_CROP
+from core.utils import asyncme
+from core.utils.color_palette import gen_svg_palette, gen_random_svg_palette
+from sources.source import RemoteFile, RemotePage, RemoteSource, SourceType
+from tasks.svg_color_replace import SvgColorReplace
 from windows.basic_window import BasicWindow
 from windows.options_window import OptionsWindow, OptionType, ColorOption
 from windows.view_change_listener import ViewChangeListener
@@ -46,8 +44,8 @@ class ColorMindWindow(BasicWindow):
 
 
 class ColorMindPalette(RemoteFile):
-    def __init__(self, remote, info, preferred_swatch_colors=None):
-        super().__init__(remote, info)
+    def __init__(self, source, info, preferred_swatch_colors=None):
+        super().__init__(source, info)
         if preferred_swatch_colors is None:
             preferred_swatch_colors = []
         self.preferred_swatch_colors = preferred_swatch_colors
@@ -64,13 +62,13 @@ class ColorMindPalette(RemoteFile):
             self.info["thumbnail"] = svg
             self.info["file"] = svg
 
-        file_path = os.path.join(self.remote.cache_dir, self.file_name)
+        file_path = os.path.join(self.source.cache_dir, self.file_name)
         with open(file_path, mode="w+") as f:
             f.writelines(self.info["thumbnail"])
         return self.file_name
 
     def get_file(self):
-        file_path = os.path.join(self.remote.cache_dir, self.file_name)
+        file_path = os.path.join(self.source.cache_dir, self.file_name)
         with open(file_path, mode="w+") as f:
             f.writelines(self.info["file"])
         return "file://" + file_path
@@ -179,8 +177,7 @@ class ColorMindPalettesSource(RemoteSource, ViewChangeListener):
                 self.window.show_spinner()
                 self.get_page(0)
 
-        asyncio.run_coroutine_threadsafe(add_task_to_queue(self.color_ext.extract_color, cb, svg_data),
-                                         loop=task_loop)
+        self.add_task_to_queue(self.color_ext.extract_color, cb, svg_data)
 
     @asyncme.run_or_none
     def search(self, query):

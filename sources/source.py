@@ -1,3 +1,4 @@
+import asyncio
 import enum
 import importlib
 import inspect
@@ -5,6 +6,8 @@ import logging
 import os
 import sys
 from abc import ABC
+from asyncio import Queue
+from threading import Thread
 
 import requests
 from cachecontrol import CacheControlAdapter
@@ -21,12 +24,12 @@ from windows.basic_window import BasicWindow
 
 class RemoteFile:
     def get_thumbnail(self):
-        return self.remote.to_local_file(self.info["thumbnail"], self.file_name)
+        return self.source.to_local_file(self.info["thumbnail"], self.file_name)
 
     def get_file(self):
         return self.info["file"]
 
-    def __init__(self, remote, info):
+    def __init__(self, source, info):
         # name to be displayed
         self.name = None
         # name to be saved as including extension
@@ -36,7 +39,7 @@ class RemoteFile:
                 raise ValueError(f"Field {field} not provided in RemoteFile package")
         self.info = info
         self.id = hash(self.info["file"])
-        self.remote: RemoteSource = remote
+        self.source: RemoteSource = source
         self.tasks: list[Task] = []
         self.show_name = False
 
@@ -112,6 +115,11 @@ class RemoteSource(ABC):
         self.session = requests.session()
         self.cache_dir = cache_dir
 
+        # asynchronous queue to process all background activities
+        # by this source, assigned on attachment of source window
+        self.task_queue = None
+        self.task_loop = None
+
         self.session.mount(
             "https://",
             CacheControlAdapter(
@@ -142,6 +150,35 @@ class RemoteSource(ABC):
 
     def on_window_attached(self, window: BasicWindow, window_pane: Gtk.Paned):
         self.window = window
+
+        # start async tasks queue in background thread
+        self.task_queue: Queue = None
+        self.task_loop = asyncio.new_event_loop()
+        task_thread = Thread(target=self.start_background_loop, daemon=True)
+        task_thread.start()
+        while not self.task_loop.is_running():
+            pass
+
+    def start_background_loop(self) -> None:
+        asyncio.set_event_loop(self.task_loop)
+        self.task_queue = Queue()
+        self.task_loop.run_until_complete(self.consume_task())
+
+    def add_task_to_queue(self, fn, callback, *args, **kwargs):
+        asyncio.run_coroutine_threadsafe(self.task_queue.put((fn, callback, args, kwargs)), loop=self.task_loop)
+
+    async def consume_task(self):
+        while True:
+            fn, callback, args, kwargs = await self.task_queue.get()
+            try:
+                if inspect.iscoroutinefunction(fn):
+                    result = await fn(*args, **kwargs)
+                else:
+                    result = fn(*args, **kwargs)
+                callback(result=result, error=None)
+            except Exception as err:
+                callback(result=None, error=err)
+            self.task_queue.task_done()
 
     def file_selected(self, file: RemoteFile):
         pass

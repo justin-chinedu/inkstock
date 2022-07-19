@@ -2,7 +2,6 @@ import asyncio
 import inspect
 from asyncio import Queue
 from threading import Thread
-from typing import Callable
 
 
 def start_background_loop(loop: asyncio.AbstractEventLoop) -> None:

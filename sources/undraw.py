@@ -21,14 +21,14 @@ class UndrawWindow(BasicWindow):
 
 class UndrawIllustration(RemoteFile):
 
-    def __init__(self, remote, info):
-        super().__init__(remote, info)
+    def __init__(self, source, info):
+        super().__init__(source, info)
         self.name = f"{self.info['name']}-undraw"
         self.file_name = self.name + ".svg"
         self.show_name = True
 
     def get_thumbnail(self):
-        return self.remote.to_local_file(self.info["thumbnail"], self.file_name)
+        return self.source.to_local_file(self.info["thumbnail"], self.file_name)
 
     def get_file(self):
         return self.info["file"]

@@ -37,15 +37,15 @@ class GoogleFontsWindow(BasicWindow, OptionsChangeListener):
 
 
 class GoogleFontFile(FontFile):
-    def __init__(self, remote, info):
-        super().__init__(remote, info)
+    def __init__(self, source, info):
+        super().__init__(source, info)
         self.name = f"{self.info['name'].replace('.ttf', '')}-google-fonts"
         self.file_name = self.name + ".ttf"
 
     def get_thumbnail(self):
         file_name = self.name + ".png"
-        font_data = self.remote.to_local_file(self.info["thumbnail"], file_name, content=True)
-        file_path = os.path.join(self.remote.cache_dir, file_name)
+        font_data = self.source.to_local_file(self.info["thumbnail"], file_name, content=True)
+        file_path = os.path.join(self.source.cache_dir, file_name)
         render_text_to_png(font_file=io.BytesIO(font_data), save_path=file_path, text=self.text,
                            spacing=self.line_spacing, font_size=self.font_size, text_color=self.color,
                            bg_color=self.bg_color)

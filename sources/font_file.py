@@ -2,8 +2,8 @@ from sources.source import RemoteFile
 
 
 class FontFile(RemoteFile):
-    def __init__(self, remote, info):
-        super().__init__(remote, info)
+    def __init__(self, source, info):
+        super().__init__(source, info)
         self.line_spacing = 40
         self.color = "#383838"
         self.bg_color = "#ffffff"

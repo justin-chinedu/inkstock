@@ -1,15 +1,12 @@
-import asyncio
 import json
 from abc import ABC, abstractmethod
 from os.path import exists
 
 from gi.repository import Gtk
 
-import tasks.task
 from core.utils import asyncme
 from sources.source import RemoteSource, RemoteFile, sanitize_query
 from tasks.svg_color_replace import SvgColorReplace
-from tasks.task import task_loop
 from windows.basic_window import BasicWindow
 from windows.options_window import OptionType, OptionsWindow, ColorOption
 from windows.results_window import FlowBoxChildWithData
@@ -151,7 +148,7 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
             if fill in modified_fill_colors.keys():
                 # TODO: Maybe try and convert hex to rgba before setting chooser color to support alpha
                 # i trimmed off alpha because Gtk color chooser doesn't support alpha in hex
-                displayed_fill = modified_fill_colors[fill][:-2]  # show modified fill instead of original fill
+                displayed_fill = modified_fill_colors[fill] # show modified fill instead of original fill
             color_option = self.options_window.set_option("fill_" + fill, displayed_fill, OptionType.COLOR,
                                                           f"Color {index + 1}",
                                                           attach=False, show_separator=False)
@@ -166,7 +163,7 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
             if stroke in modified_stroke_colors.keys():
                 # TODO: Maybe try and convert hex to rgba before setting chooser color to support alpha
                 # trim off alpha because Gtk color chooser doesn't support alpha in hex
-                displayed_stroke = modified_stroke_colors[stroke][:-2]
+                displayed_stroke = modified_stroke_colors[stroke]
             color_option = self.options_window.set_option("fill_" + stroke, displayed_stroke, OptionType.COLOR,
                                                           f"Color {index + 1}",
                                                           attach=False, show_separator=False)
@@ -188,8 +185,7 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
                     svg, fill_colors, stroke_colors = result
                     self.show_svg_colors(file, fill_colors, stroke_colors)
 
-            asyncio.run_coroutine_threadsafe(tasks.task.add_task_to_queue(self.color_ext.extract_color, cb, file),
-                                             loop=task_loop)
+            self.add_task_to_queue(self.color_ext.extract_color, cb, file)
 
     def files_selection_changed(self, files: list[RemoteFile]):
         super().files_selection_changed(files)

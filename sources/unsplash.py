@@ -24,20 +24,20 @@ class UnsplashWindow(BasicWindow):
 
 class UnsplashFile(RemoteFile):
 
-    def __init__(self, remote, info, headers):
-        super().__init__(remote, info)
+    def __init__(self, source, info, headers):
+        super().__init__(source, info)
         self.headers = headers
         self.name = f"{self.info['name'][:7]}{self.info['id']}-unsplash"
         self.file_name = self.name + ".jpg"
 
     def get_thumbnail(self):
         view_trigger = self.info["view_link"]
-        self.remote.session.head(view_trigger, headers=self.headers)
-        return self.remote.to_local_file(self.info["thumbnail"], self.file_name, self.headers)
+        self.source.session.head(view_trigger, headers=self.headers)
+        return self.source.to_local_file(self.info["thumbnail"], self.file_name, self.headers)
 
     def get_file(self):
         download_trigger = self.info["download_link"]
-        self.remote.session.head(download_trigger, headers=self.headers)
+        self.source.session.head(download_trigger, headers=self.headers)
         return super().get_file()
         # return self.remote.to_local_file(self.info["file"], self.file_name, self.headers)
 

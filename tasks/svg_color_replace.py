@@ -46,8 +46,9 @@ class SvgColorReplace(Task):
         for element in svg.iter(tag=etree.Element):
             # Fill paths with no fill or stroke with black
             # so colors could be properly extracted
-            if etree.QName(
-                    element).localname in self.element_types1 and "fill" not in element.keys() and "stroke" not in element.keys():
+            if etree.QName(element).localname in self.element_types1 and \
+                    ("fill" not in element.keys() or element.get("fill") is None) and \
+                    "stroke" not in element.keys():
                 element.attrib["fill"] = "#000000"
             elif etree.QName(element).localname in self.element_types2 and "style" in element.keys() \
                     and "fill:" not in element.attrib["style"]:

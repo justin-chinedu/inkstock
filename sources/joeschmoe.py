@@ -46,8 +46,8 @@ class JoeschmoeWindow(BasicWindow):
 
 class JoeschmoeIllustration(RemoteFile):
 
-    def __init__(self, remote, info):
-        super().__init__(remote, info)
+    def __init__(self, source, info):
+        super().__init__(source, info)
         self.name = f"{self.info['name']}-joeschmoe"
         self.file_name = self.name + ".svg"
 

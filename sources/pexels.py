@@ -23,14 +23,14 @@ class PexelsWindow(BasicWindow, OptionsChangeListener):
 
 
 class PexelsFile(RemoteFile):
-    def __init__(self, remote, info, headers):
-        super().__init__(remote, info)
+    def __init__(self, source, info, headers):
+        super().__init__(source, info)
         self.headers = headers
         self.name = f"{self.info['name'][:7]}{self.info['id']}-pexels"
         self.file_name = self.name + ".png"
 
     def get_thumbnail(self):
-        return self.remote.to_local_file(self.info["thumbnail"], self.file_name, self.headers)
+        return self.source.to_local_file(self.info["thumbnail"], self.file_name, self.headers)
 
 
 class PexelsPage(RemotePage):
