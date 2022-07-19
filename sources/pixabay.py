@@ -30,7 +30,7 @@ class PixabayFile(RemoteFile):
         super().__init__(source, info)
         self.headers = headers
         self.name = f"{self.info['id']}-pixabay"
-        self.file_name = self.name + ".jpg"
+        self.file_name = self.name + ".png"
 
     def get_thumbnail(self):
         # view_trigger = self.info["view_link"]
