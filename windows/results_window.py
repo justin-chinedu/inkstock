@@ -186,11 +186,16 @@ class SingleItemView:
         self.children[index] = child
         self.index += 1
 
+        self.list.add(child)
         if remote_file.id == selected_file.id:
             self.selected_child = child
 
-        if self.index == self.length:
-            self.add_children()
+        if self.selected_child:
+            self.list.select_child(self.selected_child)
+
+        # if self.index == self.length:
+        #     self.add_children()
+
 
 
 class MultiItemView:

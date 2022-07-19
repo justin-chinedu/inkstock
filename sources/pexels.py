@@ -26,7 +26,7 @@ class PexelsFile(RemoteFile):
     def __init__(self, source, info, headers):
         super().__init__(source, info)
         self.headers = headers
-        self.name = f"{self.info['name'][:7]}{self.info['id']}-pexels"
+        self.name = f"{self.info['name'][:7]}{self.info['id']}-pexels".replace("/", "_")
         self.file_name = self.name + ".png"
 
     def get_thumbnail(self):
