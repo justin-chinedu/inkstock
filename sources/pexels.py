@@ -1,6 +1,8 @@
 from core.utils import asyncme
 from keys import KEYS
-from sources.source import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
+from sources.source import RemoteSource, sanitize_query, SourceType
+from sources.source_page import RemotePage
+from sources.source_file import RemoteFile, NoMoreResultsFile
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager
 
@@ -61,9 +63,13 @@ class PexelsPage(RemotePage):
         try:
             response = self.remote_source.session.request(
                 "GET", self.remote_source.reqUrl, params=params, headers=headers_list)
-            photos = []
 
-            for photo in response.json()["photos"]:
+            photos = response.json()["photos"]
+            if len(photos) == 0:
+                yield NoMoreResultsFile(self.query)
+                return
+
+            for photo in photos:
                 info = {
                     "id": photo["id"],
                     "width": photo["width"],
@@ -81,8 +87,7 @@ class PexelsPage(RemotePage):
 
                 file = PexelsFile(self.remote_source, info, headers_list)
                 yield file
-                # photos.append(file)
-            # return photos
+
         except Exception as e:
             print(str('Exception: ' + e))
             return []

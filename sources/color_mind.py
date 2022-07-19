@@ -5,7 +5,9 @@ from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_CROP
 from core.utils import asyncme
 from core.utils.color_palette import gen_svg_palette, gen_random_svg_palette
-from sources.source import RemoteFile, RemotePage, RemoteSource, SourceType
+from sources.source import RemoteSource, SourceType
+from sources.source_page import RemotePage
+from sources.source_file import RemoteFile
 from tasks.svg_color_replace import SvgColorReplace
 from windows.basic_window import BasicWindow
 from windows.options_window import OptionsWindow, OptionType, ColorOption

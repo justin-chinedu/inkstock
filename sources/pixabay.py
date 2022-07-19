@@ -1,6 +1,8 @@
 from core.utils import asyncme
 from keys import KEYS
-from sources.source import RemoteFile, RemotePage, RemoteSource, SourceType, sanitize_query
+from sources.source import RemoteSource, SourceType, sanitize_query
+from sources.source_page import RemotePage
+from sources.source_file import RemoteFile, NoMoreResultsFile
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager
 
@@ -31,8 +33,8 @@ class PixabayFile(RemoteFile):
         self.file_name = self.name + ".jpg"
 
     def get_thumbnail(self):
-        view_trigger = self.info["view_link"]
-        self.source.session.head(view_trigger, headers=self.headers)
+        # view_trigger = self.info["view_link"]
+        # self.source.session.head(view_trigger, headers=self.headers)
         return self.source.to_local_file(self.info["thumbnail"], self.file_name, self.headers)
 
 
@@ -53,7 +55,7 @@ class PixabayPage(RemotePage):
                   "image_type": self.remote_source.options["image_type"]}
 
         if self.query:
-            params["query"] = self.query
+            params["q"] = self.query
 
         color = self.remote_source.options.get("colors", None)
         if color and color != "all":
@@ -71,8 +73,12 @@ class PixabayPage(RemotePage):
                 "GET", self.remote_source.reqUrl, params=params, headers=headers_list)
 
             json_response = response.json()
+            photos = json_response["hits"]
+            if len(photos) == 0:
+                yield NoMoreResultsFile(self.query)
+                return
 
-            for photo in json_response["hits"]:
+            for photo in photos:
                 info = {
                     "id": photo["id"],
                     "url": photo["largeImageURL"],

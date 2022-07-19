@@ -15,65 +15,11 @@ from cachecontrol.caches.file_cache import FileCache
 from cachecontrol.heuristics import ExpiresAfter
 from gi.repository import Gtk, Gdk
 
-from core.constants import LICENSES
 from core.utils import asyncme
-from tasks.task import Task
+from sources.source_file import RemoteFile
 from core.network.adapter import FileAdapter
+from sources.source_page import RemotePage
 from windows.basic_window import BasicWindow
-
-
-class RemoteFile:
-    def get_thumbnail(self):
-        return self.source.to_local_file(self.info["thumbnail"], self.file_name)
-
-    def get_file(self):
-        return self.info["file"]
-
-    def __init__(self, source, info):
-        # name to be displayed
-        self.name = None
-        # name to be saved as including extension
-        self.file_name = None
-        for field in ("name", "thumbnail", "license", "file"):
-            if field not in info:
-                raise ValueError(f"Field {field} not provided in RemoteFile package")
-        self.info = info
-        self.id = hash(self.info["file"])
-        self.source: RemoteSource = source
-        self.tasks: list[Task] = []
-        self.show_name = False
-
-    @property
-    def license(self):
-        return self.info["license"]
-
-    @property
-    def license_info(self):
-        return LICENSES.get(self.license, {
-            "name": "Unknown",
-            "url": self.info.get("descriptionurl", ""),
-            "modules": [],
-            "overlay": "unknown.svg",
-        })
-
-    @property
-    def author(self):
-        return self.info["author"]
-
-
-class RemotePage:
-
-    def __init__(self, remote_source, page_no: int):
-        self.page_no = page_no
-        self.remote_source = remote_source
-
-    def get_page_content(self):
-        """Should be implemented
-            Simply yields a list of remotefiles
-        """
-        raise NotImplementedError(
-            "You must implement a get_page_content function for this remote page!"
-        )
 
 
 class SourceType(enum.Enum):

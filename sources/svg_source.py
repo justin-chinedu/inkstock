@@ -5,7 +5,8 @@ from os.path import exists
 from gi.repository import Gtk
 
 from core.utils import asyncme
-from sources.source import RemoteSource, RemoteFile, sanitize_query
+from sources.source import RemoteSource, sanitize_query
+from sources.source_file import RemoteFile
 from tasks.svg_color_replace import SvgColorReplace
 from windows.basic_window import BasicWindow
 from windows.options_window import OptionType, OptionsWindow, ColorOption

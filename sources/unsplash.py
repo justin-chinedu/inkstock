@@ -1,6 +1,8 @@
 from core.utils import asyncme
 from keys import KEYS
-from sources.source import RemoteFile, RemotePage, RemoteSource, SourceType, sanitize_query
+from sources.source import RemoteSource, SourceType, sanitize_query
+from sources.source_page import RemotePage, NoResultsPage
+from sources.source_file import RemoteFile, NoMoreResultsFile
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager
 
@@ -85,6 +87,9 @@ class UnsplashPage(RemotePage):
                 json_response = response.json()["results"]
             else:
                 json_response = response.json()
+
+            if len(json_response) == 0:
+                yield NoMoreResultsFile(query=self.query)
 
             for photo in json_response:
                 info = {

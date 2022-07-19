@@ -2,7 +2,7 @@ import os.path
 
 from lxml import etree
 
-from sources.source import RemoteFile
+from sources.source_file import RemoteFile
 from tasks.task import Task
 
 

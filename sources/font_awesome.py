@@ -1,4 +1,6 @@
-from sources.source import RemoteFile, RemotePage, RemoteSource, sanitize_query, SourceType
+from sources.source import RemoteSource, sanitize_query, SourceType
+from sources.source_page import RemotePage, NoResultsPage
+from sources.source_file import RemoteFile
 from sources.svg_source import SvgSource
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_GROW
@@ -110,4 +112,7 @@ class FASource(SvgSource):
         self.window.show_spinner()
         self.results = [(key, value) for key, value in self.icon_map.items()
                         if key.startswith(query)]
-        self.get_page(0)
+        if not self.results:
+            self.window.add_page(NoResultsPage(query))
+        else:
+            self.get_page(0)

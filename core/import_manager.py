@@ -12,7 +12,8 @@ from gi.repository import Gtk
 from core.constants import CACHE_DIR
 from core.network.adapter import FileAdapter
 from core.utils import asyncme
-from sources.source import RemoteSource, RemoteFile, SourceType
+from sources.source import RemoteSource, SourceType
+from sources.source_file import RemoteFile
 from windows.import_window import ImportWindow, ImportItem
 from windows.options_window import OptionsWindow, OptionType, OptionsChangeListener
 

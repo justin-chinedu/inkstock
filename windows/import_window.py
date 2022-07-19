@@ -2,7 +2,7 @@ from gi.repository import Gtk, Gdk
 
 from core.gui.window import ChildWindow
 from core.utils import asyncme
-from sources.source import RemoteFile
+from sources.source_file import RemoteFile
 from windows.basic_window import BasicWindow
 
 

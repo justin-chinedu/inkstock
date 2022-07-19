@@ -4,8 +4,9 @@ import os
 from os.path import exists
 
 from core.utils import asyncme
-from sources.source import RemotePage, RemoteSource, SourceType
-from sources.font_file import FontFile
+from sources.source import RemoteSource, SourceType
+from sources.source_page import RemotePage, NoResultsPage
+from sources.source_file import FontFile
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_CROP
 from core.utils.text_to_png import render_text_to_png
@@ -113,7 +114,10 @@ class GoogleFontsSource(RemoteSource, OptionsChangeListener):
         self.window.show_spinner()
         self.results = [(key, value) for key, value in self.fonts.items()
                         if query in key.lower()]
-        self.get_page(0)
+        if not self.results:
+            self.window.add_page(NoResultsPage(query))
+        else:
+            self.get_page(0)
 
     def on_window_attached(self, window: BasicWindow, window_pane):
         super().on_window_attached(window, window_pane)

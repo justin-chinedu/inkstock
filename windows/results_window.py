@@ -2,7 +2,9 @@ import gi
 from core.utils import asyncme
 from core.gui.window import ChildWindow
 from core.constants import CACHE_DIR
-from sources.source import RemoteFile, RemotePage, RemoteSource
+from sources.source import RemoteSource
+from sources.source_page import RemotePage, NoResultsPage
+from sources.source_file import RemoteFile, NoMoreResultsFile
 from core.gui.pixmap_manager import PixmapManager
 from windows.view_change_listener import ViewChangeListener
 
@@ -197,7 +199,6 @@ class SingleItemView:
         #     self.add_children()
 
 
-
 class MultiItemView:
     def __init__(self, window: ResultsWindow, pixmaps) -> None:
         self.builder = Gtk.Builder()
@@ -220,10 +221,19 @@ class MultiItemView:
     def clear(self):
         def remove(child: Gtk.Widget):
             child.destroy()
+
         self.flow_box.foreach(remove)
 
     def show_view(self):
         self.window.show_window(self.multi_view, "multiview" + str(id(self)))
+
+    def show_no_results(self, message):
+        stack = Gtk.Stack()
+        label = Gtk.Label()
+        label.set_markup(message)
+        stack.add(label)
+        stack.show_all()
+        self.window.show_window(stack, "no_results")
 
     def add_item(self, remote_file: RemoteFile):
         self.pixmaps.get_pixbuf_for_type(remote_file, "multi", self.callback, remote_file)
@@ -253,29 +263,6 @@ class MultiItemView:
         child.style_ctx.add_provider_for_screen(Gdk.Screen.get_default(), css_prov,
                                                 Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.flow_box.add(child)
-        # asyncme.run_or_none(os.remove)(pic_path)
-        # if True:
-        #     self.builder.add_objects_from_file(
-        #         'ui/results_window.ui', ("result_item", ""))
-        #     result_item = self.builder.get_object("result_item")
-        #     result_item.set_hexpand(False)
-        #     image: Gtk.Image = self.builder.get_object("result_image")
-        #     image.set_from_pixbuf(image_pixbuff)
-        #     text = self.builder.get_object("result_text")
-        #     text.set_text(remote_file.string)
-        #     self.widget.add(FlowBoxChildWithData(result_item, remote_file))
-        #
-        # else:
-        #     self.builder.add_objects_from_file(
-        #         'ui/results_window.ui', ("result_image_only", ""))
-        #     result_item = self.builder.get_object("result_image_only")
-        #     result_item.set_from_pixbuf(image_pixbuff)
-        #     flow_box = FlowBoxChildWithData(result_item, remote_file)
-        #     flow_box.set_hexpand(False)
-        #     style = flow_box.get_style_context()
-        #     style.add_class("transparent")
-        #     self.widget.set_homogeneous(False)
-        #     self.widget.add(flow_box)
 
 
 class ResultsHandler:
@@ -351,8 +338,15 @@ class ResultsHandler:
         first_page = len(self.pages) == 1
         self.window.multiview.show_view()
         if first_page:
+            if isinstance(page, NoResultsPage):
+                self.window.multiview.show_no_results(page.message)
+                return
 
             for file in page.get_page_content():
+                if isinstance(file, NoMoreResultsFile) and len(self.page_items) == 0:
+                    self.window.multiview.show_no_results(file.message)
+                    return
+
                 self.add_page_item(file)
 
             self.current_page = page
@@ -374,13 +368,18 @@ class ResultsHandler:
     def load_more_btn_clicked(self, widget):
         last_index = len(self.pages) - 1
         current_index = self.get_current_page_index()
+        no_more_results = False
         if current_index < last_index:
             next_page = self.pages[current_index + 1]
             for file in next_page.get_page_content():
+                if isinstance(file, NoMoreResultsFile):
+                    self.window.multiview.load_more_btn.hide()
+                    no_more_results = True
+                    break
                 self.add_page_item(file)
             self.current_page = next_page
 
-            # TODO: Make other faster implementations
+            # TODO: Write another faster implementation
             # Hide view button of any child (Work around)
             # But might be very slow
             def hide(child):
@@ -388,8 +387,8 @@ class ResultsHandler:
                     child.button.hide()
 
             self.window.multiview.flow_box.foreach(hide)
-
-            self.try_next_page(self.source, current_index + 1)
+            if not no_more_results:
+                self.try_next_page(self.source, current_index + 1)
         elif current_index == last_index:
             self.try_next_page(self.source, current_index + 1)
 
