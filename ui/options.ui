@@ -12,6 +12,7 @@
     <signal name="clicked" handler="on_click" swapped="no"/>
   </object>
   <object class="GtkFlowBox" id="options_checkbox_flow">
+    <property name="name">options_checkbox_flow</property>
     <property name="visible">True</property>
     <property name="can-focus">False</property>
     <property name="homogeneous">True</property>
@@ -101,6 +102,7 @@
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="margin-top">10</property>
+            <property name="margin-bottom">10</property>
             <child>
               <object class="GtkViewport">
                 <property name="visible">True</property>
@@ -110,6 +112,7 @@
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="margin-top">10</property>
+                    <property name="margin-bottom">10</property>
                     <property name="orientation">vertical</property>
                     <child>
                       <placeholder/>
@@ -178,7 +181,8 @@
         <property name="primary-icon-activatable">False</property>
         <property name="primary-icon-sensitive">False</property>
         <property name="placeholder-text" translatable="yes">Search</property>
-        <signal name="activate" handler="search_changed" swapped="no"/>
+        <signal name="activate" handler="search_submitted" swapped="no"/>
+        <signal name="search-changed" handler="search_changed" swapped="no"/>
       </object>
       <packing>
         <property name="expand">False</property>

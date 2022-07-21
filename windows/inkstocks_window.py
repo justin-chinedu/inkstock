@@ -6,7 +6,8 @@ from core.constants import CACHE_DIR, SOURCES
 from core.gui.pixmap_manager import PixmapManager, SIZE_ASPECT_GROW
 from core.gui.window import Window
 from core.import_manager import ImportManager
-from sources.source import RemoteSource
+from sources.source import RemoteSource, SourceType
+from windows.options_window import OptionsWindow, OptionType, OptionsChangeListener
 
 
 class ListBoxRowWithData(Gtk.ListBoxRow):
@@ -50,41 +51,16 @@ class InkStockWindow(Window):
         self.no_of_selected = self.widget('no_of_selected')
         self.page_stack: Gtk.Stack = self.widget('page_stack')
         self.import_files_btn.connect('clicked', self.import_files)
-        self.sources_lists: Gtk.ListBox = self.widget('sources_lists')
-
-        self.signal_handler = MainHandler(self)
-        self.w_tree.connect_signals(self.signal_handler)
-
-        #RemoteSource.load(SOURCES)
+        self.sources_options: Gtk.Stack = self.widget('sources_options')
 
         if not os.path.exists(CACHE_DIR):
             os.mkdir(CACHE_DIR)
+
         self.sources_pixmanager = PixmapManager(CACHE_DIR, scale=3, pref_width=150,
                                                 pref_height=150, padding=40, aspect_ratio=SIZE_ASPECT_GROW, )
         self.import_manager = ImportManager(self)
-
-        self.sources = [source(CACHE_DIR, self.import_manager) for source in RemoteSource.sources.values()]
-        self.sources_lists.show_all()
-        self.sources_results = []
         self.sources_windows = []
-
-        default_source_index = 0
-        # create a listboxrow wih data and add to list box
-        for index, source in enumerate(self.sources):
-            if not source.is_enabled:
-                continue
-            icon = self.sources_pixmanager.get_pixbuf_for_type(source.icon, "icon", None)
-            list_box = ListBoxRowWithData(
-                icon, source.name, source.desc, index, source)
-            list_box.show_all()
-            self.sources_lists.add(list_box)
-
-            if source.is_default:
-                default_source_index = index
-
-        # select the source
-        self.sources_lists.select_row(
-            self.sources_lists.get_row_at_index(default_source_index))
+        self.options_handler = OptionsHandler(self)
 
     def _on_theme_name_changed(self, settings, _):
         name = settings.get_property("gtk-theme-name").lower()
@@ -111,6 +87,12 @@ class InkStockWindow(Window):
             w = self.gapp.load_window(window_cls.name, source=source, main_window=self)
             self.sources_windows.append(window_cls)
 
+    def show_options_window(self, window):
+        if not self.sources_options.get_child_by_name("sources_options"):
+            self.sources_options.add_named(window, "sources_options")
+        child = self.sources_options.get_child_by_name("sources_options")
+        self.sources_options.set_visible_child(child)
+
     def show_window(self, window, source):
         """Adds window to the page stack"""
 
@@ -125,7 +107,7 @@ class InkStockWindow(Window):
         self.source_icon.clear()
         icon = self.sources_pixmanager.get_pixbuf_for_type("icons/inkstock_logo.svg", "icon", None)
         self.source_icon.set_from_pixbuf(icon)
-        self.sources_lists.set_sensitive(False)
+        self.sources_options.set_sensitive(False)
         self.import_files_btn.set_sensitive(False)
         if not self.import_manager.window:
             self.gapp.load_window(self.import_manager.window_cls.name, manager=self.import_manager)
@@ -133,27 +115,104 @@ class InkStockWindow(Window):
         self.import_manager.show_window()
 
     def show_sources_window(self):
-        self.sources_lists.set_sensitive(True)
+        self.sources_options.set_sensitive(True)
         self.import_files_btn.set_sensitive(True)
-        row: ListBoxRowWithData = self.sources_lists.get_selected_row()
-        self.signal_handler.source_selected(self.sources_lists, row)
+        self.options_handler.source_selected(self.options_handler.last_selected_source)
 
 
-class MainHandler:
-
+class OptionsHandler(OptionsChangeListener):
     def __init__(self, window):
         self.window = window
+        self.sources = [source(CACHE_DIR, self.window.import_manager) for source in RemoteSource.sources.values() if
+                        source.is_enabled]
+        self.displayed_sources = self.sources
+        self.disabled = True  # when disabled this doesn't react to change in options window
+        self.last_selected_source = None
+        self.last_selected_option = None
+        self.query = ""
 
-    def get_selected_source(self) -> RemoteSource:
-        return self.window.sources_lists.get_selected_row().source
+        self.options_window = OptionsWindow(self)
+        search = self.options_window.set_option("source_query", None, OptionType.SEARCH, "Search Sources")
+        search.notify_on_change = True
+        self.source_type_values = sorted(map(lambda x: x.value, SourceType))
+        checkboxes = self.options_window.set_option(f"source_types", self.source_type_values, OptionType.CHECKBOX,
+                                                    "Source types", attach=False)
+        self.options_window.set_option("source_type_group", [checkboxes], OptionType.GROUP, "Filter Source types",
+                                       show_separator=True)
 
-    def source_selected(self, listbox, row):
-        self.window.source_title.set_text(row.name)
-        self.window.source_desc.set_markup(row.desc)
-        source = self.get_selected_source()
+        self.show_displayed_sources()
+        self.disabled = False
+
+        self.window.show_options_window(self.options_window.window)
+        self.window.sources_options.show_all()
+
+    def show_displayed_sources(self):
+        for value in self.source_type_values:
+            sources = [source for source in self.displayed_sources if source.source_type.value == value]
+            select_option = self.options_window.set_option(f"sources_select_{value}",
+                                                           list(map(lambda x: x.name, sources)),
+                                                           OptionType.SELECT,
+                                                           show_separator=False)
+            if self.last_selected_source \
+                    and self.last_selected_source in self.displayed_sources \
+                    and self.last_selected_source.source_type.value == value:
+                self.disabled = True
+                select_option.select_option(self.last_selected_source.name)
+                self.disabled = False
+
+    def on_change(self, options):
+        if self.disabled:
+            return
+
+        if "source_query" in options and self.query != options["source_query"]:
+            self.query = options["source_query"]
+            if self.query == "":
+                for value in self.source_type_values:
+                    self.options_window.remove_option(f"sources_select_{value}")
+                self.displayed_sources = self.sources
+                self.show_displayed_sources()
+            else:
+                self.displayed_sources = [source for source in self.sources if self.query.lower() in
+                                          source.name.lower()]
+                for value in self.source_type_values:
+                    self.options_window.remove_option(f"sources_select_{value}")
+                self.show_displayed_sources()
+
+        if "source_types" in options:
+            source_types = options["source_types"]
+            unchecked_types = set(self.source_type_values).difference(source_types)
+            checked_types = set(self.source_type_values).intersection(source_types)
+            if checked_types:
+                for t in unchecked_types:
+                    self.options_window.options[f"sources_select_{t}"].view.hide()
+                for t in checked_types:
+                    self.options_window.options[f"sources_select_{t}"].view.show()
+            else:
+                for t in unchecked_types:
+                    self.options_window.options[f"sources_select_{t}"].view.show()
+
+        for value in self.source_type_values:
+            source_name = options[f"sources_select_{value}"]
+            if source_name is not None:  # Selected
+                source = [source for source in self.displayed_sources if source.name == source_name][0]
+                option = self.options_window.options[f"sources_select_{value}"]
+                if self.last_selected_source and source.source_type != self.last_selected_source.source_type:
+                    self.disabled = True
+                    self.last_selected_option.unselect_all()
+                    self.disabled = False
+                self.source_selected(source)
+                self.last_selected_source = source
+                self.last_selected_option = option
+
+    def source_selected(self, source):
+        if source == self.last_selected_source:
+            return
+        self.window.source_title.set_text(source.name)
+        self.window.source_desc.set_markup(source.desc)
 
         self.window.source_icon.clear()
-        self.window.source_icon.set_from_pixbuf(row.icon)
+        icon = self.window.sources_pixmanager.get_pixbuf_for_type(source.icon, "icon", None)
+        self.window.source_icon.set_from_pixbuf(icon)
 
         self.window.add_window(source.window_cls, source)
         self.window.show_window(source.window, source)

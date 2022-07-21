@@ -1,355 +1,361 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Generated with glade 3.38.2 -->
 <interface>
-    <requires lib="gtk+" version="3.24"/>
-    <object class="GtkImage" id="import">
+  <requires lib="gtk+" version="3.24"/>
+  <object class="GtkImage" id="import">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="icon-name">document-save</property>
+  </object>
+  <object class="GtkWindow" id="inkstocks_window">
+    <property name="can-focus">False</property>
+    <property name="title" translatable="yes">InkStock</property>
+    <property name="window-position">center</property>
+    <property name="default-width">1550</property>
+    <property name="default-height">1000</property>
+    <property name="icon">../icons/inkstock_logo.svg</property>
+    <property name="gravity">center</property>
+    <child>
+      <object class="GtkPaned" id="pane_view">
         <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <property name="icon-name">document-save</property>
-    </object>
-    <object class="GtkWindow" id="inkstocks_window">
-        <property name="can-focus">False</property>
-        <property name="title" translatable="yes">InkStock</property>
-        <property name="window-position">center</property>
-        <property name="default-width">1500</property>
-        <property name="default-height">1000</property>
-        <property name="icon">../icons/inkstock_logo.svg</property>
-        <property name="gravity">center</property>
+        <property name="can-focus">True</property>
+        <property name="position">250</property>
+        <property name="position-set">True</property>
         <child>
-            <object class="GtkPaned" id="pane_view">
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="orientation">vertical</property>
+            <property name="baseline-position">top</property>
+            <child>
+              <object class="GtkImage" id="inkscape_icon">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="xpad">4</property>
+                <property name="ypad">4</property>
+                <property name="pixbuf">../icons/inkstock_logo.svg</property>
+                <property name="pixel-size">40</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="margin-bottom">20</property>
+                <property name="xpad">10</property>
+                <property name="label" translatable="yes">External Sources</property>
+                <attributes>
+                  <attribute name="font-desc" value="Poppins Semi-Bold 10"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkScrolledWindow">
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
-                <property name="position">200</property>
-                <property name="position-set">True</property>
                 <child>
-                    <object class="GtkBox">
+                  <object class="GtkViewport">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="shadow-type">none</property>
+                    <child>
+                      <object class="GtkStack" id="sources_options">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="orientation">vertical</property>
-                        <property name="baseline-position">top</property>
                         <child>
-                            <object class="GtkImage" id="inkscape_icon">
-                                <property name="visible">True</property>
-                                <property name="can-focus">False</property>
-                                <property name="xpad">4</property>
-                                <property name="ypad">4</property>
-                                <property name="pixbuf">../icons/inkstock_logo.svg</property>
-                                <property name="pixel-size">40</property>
-                            </object>
-                            <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">False</property>
-                                <property name="position">0</property>
-                            </packing>
+                          <placeholder/>
                         </child>
-                        <child>
-                            <object class="GtkLabel">
-                                <property name="visible">True</property>
-                                <property name="can-focus">False</property>
-                                <property name="margin-bottom">20</property>
-                                <property name="xpad">10</property>
-                                <property name="label" translatable="yes">External Sources</property>
-                                <attributes>
-                                    <attribute name="font-desc" value="Poppins Semi-Bold 10"/>
-                                </attributes>
-                            </object>
-                            <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="position">1</property>
-                            </packing>
-                        </child>
-                        <child>
-                            <object class="GtkScrolledWindow">
-                                <property name="visible">True</property>
-                                <property name="can-focus">True</property>
-                                <child>
-                                    <object class="GtkViewport">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="shadow-type">none</property>
-                                        <child>
-                                            <object class="GtkListBox" id="sources_lists">
-                                                <property name="visible">True</property>
-                                                <property name="can-focus">False</property>
-                                                <signal name="row-selected" handler="source_selected" swapped="no"/>
-                                            </object>
-                                        </child>
-                                    </object>
-                                </child>
-                            </object>
-                            <packing>
-                                <property name="expand">True</property>
-                                <property name="fill">True</property>
-                                <property name="position">2</property>
-                            </packing>
-                        </child>
-                        <child>
-                            <object class="GtkButton" id="add_local_source">
-                                <property name="label" translatable="yes">Add Local Source</property>
-                                <property name="visible">True</property>
-                                <property name="can-focus">True</property>
-                                <property name="receives-default">True</property>
-                                <property name="margin-start">20</property>
-                                <property name="margin-end">20</property>
-                                <property name="margin-top">10</property>
-                                <property name="margin-bottom">10</property>
-                                <property name="relief">half</property>
-                            </object>
-                            <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="position">3</property>
-                            </packing>
-                        </child>
-                    </object>
-                    <packing>
-                        <property name="resize">False</property>
-                        <property name="shrink">True</property>
-                    </packing>
+                      </object>
+                    </child>
+                  </object>
                 </child>
-                <child>
-                    <object class="GtkBox">
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="orientation">vertical</property>
-                        <property name="baseline-position">bottom</property>
-                        <child>
-                            <!-- n-columns=3 n-rows=3 -->
-                            <object class="GtkGrid">
-                                <property name="visible">True</property>
-                                <property name="can-focus">False</property>
-                                <child>
-                                    <object class="GtkBox">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <child>
-                                            <object class="GtkFrame" id="sources_icon_frame">
-                                                <property name="visible">True</property>
-                                                <property name="can-focus">False</property>
-                                                <property name="label-xalign">0</property>
-                                                <property name="shadow-type">none</property>
-                                                <child>
-                                                    <object class="GtkImage" id="source_icon">
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">False</property>
-                                                        <property name="margin-start">30</property>
-                                                        <property name="margin-end">30</property>
-                                                    </object>
-                                                </child>
-                                                <child type="label_item">
-                                                    <placeholder/>
-                                                </child>
-                                            </object>
-                                            <packing>
-                                                <property name="expand">True</property>
-                                                <property name="fill">True</property>
-                                                <property name="position">0</property>
-                                            </packing>
-                                        </child>
-                                        <child>
-                                            <!-- n-columns=2 n-rows=3 -->
-                                            <object class="GtkGrid">
-                                                <property name="visible">True</property>
-                                                <property name="can-focus">False</property>
-                                                <property name="column-spacing">1</property>
-                                                <property name="column-homogeneous">True</property>
-                                                <child>
-                                                    <object class="GtkLabel" id="source_title">
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">False</property>
-                                                        <property name="halign">start</property>
-                                                        <property name="margin-top">20</property>
-                                                        <property name="margin-bottom">20</property>
-                                                        <property name="label" translatable="yes">Material Icons
-                                                        </property>
-                                                        <attributes>
-                                                            <attribute name="font-desc" value="NexaRegular Bold 10"/>
-                                                            <attribute name="scale" value="1.5"/>
-                                                        </attributes>
-                                                    </object>
-                                                    <packing>
-                                                        <property name="left-attach">0</property>
-                                                        <property name="top-attach">0</property>
-                                                    </packing>
-                                                </child>
-                                                <child>
-                                                    <object class="GtkLabel" id="source_desc">
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">False</property>
-                                                        <property name="margin-bottom">20</property>
-                                                        <property name="label" translatable="yes">Material design system
-                                                            icons are simple, modern, friendly, and sometimes quirky.
-                                                        </property>
-                                                        <property name="wrap">True</property>
-                                                        <property name="max-width-chars">80</property>
-                                                    </object>
-                                                    <packing>
-                                                        <property name="left-attach">0</property>
-                                                        <property name="top-attach">1</property>
-                                                        <property name="width">2</property>
-                                                        <property name="height">2</property>
-                                                    </packing>
-                                                </child>
-                                                <child>
-                                                    <placeholder/>
-                                                </child>
-                                            </object>
-                                            <packing>
-                                                <property name="expand">False</property>
-                                                <property name="fill">True</property>
-                                                <property name="position">1</property>
-                                            </packing>
-                                        </child>
-                                    </object>
-                                    <packing>
-                                        <property name="left-attach">0</property>
-                                        <property name="top-attach">1</property>
-                                        <property name="width">2</property>
-                                    </packing>
-                                </child>
-                                <child>
-                                    <object class="GtkFixed">
-                                        <property name="height-request">30</property>
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                    </object>
-                                    <packing>
-                                        <property name="left-attach">0</property>
-                                        <property name="top-attach">0</property>
-                                    </packing>
-                                </child>
-                                <child>
-                                    <placeholder/>
-                                </child>
-                                <child>
-                                    <placeholder/>
-                                </child>
-                                <child>
-                                    <placeholder/>
-                                </child>
-                                <child>
-                                    <placeholder/>
-                                </child>
-                                <child>
-                                    <placeholder/>
-                                </child>
-                                <child>
-                                    <placeholder/>
-                                </child>
-                            </object>
-                            <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="position">0</property>
-                            </packing>
-                        </child>
-                        <child>
-                            <object class="GtkSeparator">
-                                <property name="visible">True</property>
-                                <property name="can-focus">False</property>
-                            </object>
-                            <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="position">1</property>
-                            </packing>
-                        </child>
-                        <child>
-                            <object class="GtkStack" id="page_stack">
-                                <property name="visible">True</property>
-                                <property name="can-focus">False</property>
-                                <property name="hexpand">True</property>
-                                <property name="transition-type">slide-right</property>
-                                <property name="interpolate-size">True</property>
-                                <child>
-                                    <placeholder/>
-                                </child>
-                            </object>
-                            <packing>
-                                <property name="expand">True</property>
-                                <property name="fill">True</property>
-                                <property name="position">2</property>
-                            </packing>
-                        </child>
-                        <child>
-                            <!-- n-columns=4 n-rows=1 -->
-                            <object class="GtkGrid">
-                                <property name="visible">True</property>
-                                <property name="can-focus">False</property>
-                                <property name="column-spacing">5</property>
-                                <child>
-                                    <object class="GtkButton" id="import_files_btn">
-                                        <property name="label" translatable="yes">Import Files</property>
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">True</property>
-                                        <property name="receives-default">True</property>
-                                        <property name="halign">end</property>
-                                        <property name="margin-end">40</property>
-                                        <property name="margin-top">10</property>
-                                        <property name="margin-bottom">10</property>
-                                        <property name="image">import</property>
-                                    </object>
-                                    <packing>
-                                        <property name="left-attach">3</property>
-                                        <property name="top-attach">0</property>
-                                    </packing>
-                                </child>
-                                <child>
-                                    <object class="GtkLabel" id="no_of_selected">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="xpad">20</property>
-                                        <property name="label" translatable="yes">0 items selected</property>
-                                    </object>
-                                    <packing>
-                                        <property name="left-attach">2</property>
-                                        <property name="top-attach">0</property>
-                                    </packing>
-                                </child>
-                                <child>
-                                    <object class="GtkProgressBar" id="download_progress">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="margin-top">10</property>
-                                        <property name="margin-bottom">10</property>
-                                        <property name="hexpand">True</property>
-                                        <property name="text" translatable="yes">fetching files ...</property>
-                                        <property name="show-text">True</property>
-                                    </object>
-                                    <packing>
-                                        <property name="left-attach">1</property>
-                                        <property name="top-attach">0</property>
-                                    </packing>
-                                </child>
-                                <child>
-                                    <object class="GtkFixed">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="hexpand">True</property>
-                                    </object>
-                                    <packing>
-                                        <property name="left-attach">0</property>
-                                        <property name="top-attach">0</property>
-                                    </packing>
-                                </child>
-                            </object>
-                            <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="position">3</property>
-                            </packing>
-                        </child>
-                    </object>
-                    <packing>
-                        <property name="resize">True</property>
-                        <property name="shrink">True</property>
-                    </packing>
-                </child>
-            </object>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="add_local_source">
+                <property name="label" translatable="yes">Add Local Source</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="margin-start">20</property>
+                <property name="margin-end">20</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">10</property>
+                <property name="relief">half</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">3</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="resize">False</property>
+            <property name="shrink">True</property>
+          </packing>
         </child>
-        <style>
-            <class name="inkstocks"/>
-        </style>
-    </object>
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="orientation">vertical</property>
+            <property name="baseline-position">bottom</property>
+            <child>
+              <!-- n-columns=3 n-rows=3 -->
+              <object class="GtkGrid">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkFrame" id="sources_icon_frame">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label-xalign">0</property>
+                        <property name="shadow-type">none</property>
+                        <child>
+                          <object class="GtkImage" id="source_icon">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="margin-start">30</property>
+                            <property name="margin-end">30</property>
+                          </object>
+                        </child>
+                        <child type="label_item">
+                          <placeholder/>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <!-- n-columns=2 n-rows=3 -->
+                      <object class="GtkGrid">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="column-spacing">1</property>
+                        <property name="column-homogeneous">True</property>
+                        <child>
+                          <object class="GtkLabel" id="source_title">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="halign">start</property>
+                            <property name="margin-top">20</property>
+                            <property name="margin-bottom">20</property>
+                            <property name="label" translatable="yes">InkStock</property>
+                            <attributes>
+                              <attribute name="font-desc" value="NexaRegular Bold 10"/>
+                              <attribute name="scale" value="1.5"/>
+                            </attributes>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="source_desc">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="margin-bottom">20</property>
+                            <property name="wrap">True</property>
+                            <property name="max-width-chars">80</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">1</property>
+                            <property name="width">2</property>
+                            <property name="height">2</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">1</property>
+                    <property name="width">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFixed">
+                    <property name="height-request">30</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSeparator">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkStack" id="page_stack">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="hexpand">True</property>
+                <property name="transition-type">slide-right</property>
+                <property name="interpolate-size">True</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="pixbuf">../icons/inkstock_logo_full.svg</property>
+                  </object>
+                  <packing>
+                    <property name="name">page0</property>
+                    <property name="title" translatable="yes">page0</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <!-- n-columns=4 n-rows=1 -->
+              <object class="GtkGrid">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="column-spacing">5</property>
+                <child>
+                  <object class="GtkButton" id="import_files_btn">
+                    <property name="label" translatable="yes">Import Files</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <property name="halign">end</property>
+                    <property name="margin-end">40</property>
+                    <property name="margin-top">10</property>
+                    <property name="margin-bottom">10</property>
+                    <property name="image">import</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">3</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="no_of_selected">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="xpad">20</property>
+                    <property name="label" translatable="yes">0 items selected</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">2</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkProgressBar" id="download_progress">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-top">10</property>
+                    <property name="margin-bottom">10</property>
+                    <property name="hexpand">True</property>
+                    <property name="text" translatable="yes">fetching files ...</property>
+                    <property name="show-text">True</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFixed">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="hexpand">True</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">3</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="resize">True</property>
+            <property name="shrink">True</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <style>
+      <class name="inkstocks"/>
+    </style>
+  </object>
 </interface>

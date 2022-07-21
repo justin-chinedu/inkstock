@@ -33,7 +33,7 @@ class OptionsWindow(OptionsChangeListener):
 
     def set_option(self, name, values, option_type, label=None, show_separator=True, attach=True):
         if option_type == OptionType.CHECKBOX:
-            option = CheckBoxOption(name, values, self, label)
+            option = CheckBoxOption(name, values, self)
         elif option_type == OptionType.COLOR:
             option = ColorOption(name, values, self, label)
         elif option_type == OptionType.DROPDOWN:
@@ -191,11 +191,17 @@ class DropDownOption(Option):
 class CheckBoxOption(Option):
     def __init__(self, name, values, change_reciever) -> None:
         super().__init__(name, values, "options_checkbox_flow", change_reciever)
-        self.value = Set[str]
+        self.value = set()
+        self.checkboxes = []
         for value in values:
-            checkbox = Gtk.CheckButton(value)
+            checkbox = Gtk.CheckButton.new_with_label(value)
             checkbox.connect("toggled", self.toggled)
+            self.checkboxes.append(checkbox)
             self.view.add(checkbox)
+
+    def toggle_all(self, active : bool):
+        for c in self.checkboxes:
+            c.set_active(active)
 
     def toggled(self, button: Gtk.CheckButton):
         value = button.get_label()
@@ -214,8 +220,15 @@ class SearchField(Option):
         self.entry.set_placeholder_text("Search")
         self.widget("options_search_label").set_text(label)
         self.value = ""
+        self.notify_on_change = False
 
     def search_changed(self, search_entry):
+        if self.notify_on_change:
+            query = search_entry.get_text()
+            self.value = query
+            self.receiver.on_change(self)
+
+    def search_submitted(self, search_entry):
         query = search_entry.get_text()
         self.value = query
         if query and (len(query) > 1):
@@ -256,7 +269,7 @@ class Group(Option):
             self.add_option(option)
 
     def add_option(self, option):
-        self.group_list.show()
+        self.group_list.show_all()
         self.group_list.pack_start(option.view, False, False, 0)
         self.group_list.pack_start(self.get_separator(), False, False, 0)
 
@@ -272,15 +285,27 @@ class SelectOption(Option):
     def __init__(self, name, options, change_receiver, label):
         super().__init__(name, options, "options_select_list", change_receiver)
         self.view.connect("row-selected", self.option_selected)
-        for option in options:
+        self.options = options
+        for option in self.options:
             self.add_option(option)
 
     def add_option(self, option):
         row = SelectOptionRow(option)
         self.view.add(row)
 
+    def select_option(self, option):
+        if option in self.options:
+            index = self.options.index(option)
+            self.view.select_row(self.view.get_row_at_index(index))
+
+    def unselect_all(self):
+        self.view.unselect_all()
+
     def option_selected(self, listbox, row):
-        self.value = row.data
+        if not row:
+            self.value = None
+        else:
+            self.value = row.data
         self.receiver.on_change(self)
 
 
@@ -289,7 +314,8 @@ class SelectOptionRow(Gtk.ListBoxRow):
     def __init__(self, view):
         super().__init__()
         self.data = view
-        self.set_margin_top(10)
+        self.set_margin_top(5)
+        self.set_margin_bottom(5)
         self.set_size_request(50, 40)
         if isinstance(view, str):
             label = Gtk.Label(label=view)

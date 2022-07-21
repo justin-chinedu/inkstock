@@ -14,6 +14,15 @@ window flowbox > flowboxchild * {
     border-radius: 5%;
 }
 
+#options_checkbox_flow > flowboxchild{
+    background-color: transparent;
+    color: white;
+}
+
+#options_checkbox_flow > flowboxchild > checkbutton > label {
+    margin-left: 10px;
+}
+
 #import_cancel{
   border-radius: 55%;
 }
