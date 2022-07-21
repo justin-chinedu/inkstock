@@ -205,8 +205,8 @@ class OptionsHandler(OptionsChangeListener):
                 self.last_selected_option = option
 
     def source_selected(self, source):
-        if source == self.last_selected_source:
-            return
+        # if source == self.last_selected_source:
+        #     return
         self.window.source_title.set_text(source.name)
         self.window.source_desc.set_markup(source.desc)
 
