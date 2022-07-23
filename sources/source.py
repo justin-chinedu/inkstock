@@ -27,7 +27,7 @@ class SourceType(enum.Enum):
     ILLUSTRATION = "illustration"
     FONT = "fonts"
     PHOTO = "photos"
-    SWATCH = "swatches"
+    PALETTE = "color palette"
 
 
 class RemoteSource(ABC):
@@ -50,7 +50,7 @@ class RemoteSource(ABC):
     windows = []
 
     def __init_subclass__(cls):
-        if not inspect.isabstract(cls):
+        if not inspect.isabstract(cls) and cls.name:
             cls.sources[cls.__name__] = cls
             cls.windows.append(cls.window_cls)
 

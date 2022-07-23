@@ -117,7 +117,7 @@ class ColorMindPalettesSource(RemoteSource, ViewChangeListener):
     desc = "ColorMind is a color scheme generator that uses deep learning." \
            " It can learn color styles from photographs, movies, and popular art."
     icon = "icons/color_mind.svg"
-    source_type = SourceType.SWATCH
+    source_type = SourceType.PALETTE
     file_cls = ColorMindPalette
     page_cls = ColorMindPalettesPage
     is_default = False

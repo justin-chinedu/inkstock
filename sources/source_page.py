@@ -15,6 +15,6 @@ class RemotePage:
 
 class NoResultsPage:
     def __init__(self, query: str):
-        self.message = f'<span  size="large" weight="normal" >No search results for</span>\n' + \
+        self.message = f'<span  size="large" weight="normal" >No search results for</span>\n\n' + \
                        f'<span  size="large" weight="bold" >{query}</span>\n'
 

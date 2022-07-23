@@ -1,4 +1,5 @@
 import json
+import zlib
 from abc import ABC, abstractmethod
 from os.path import exists
 
@@ -16,11 +17,13 @@ from windows.view_change_listener import ViewChangeListener
 
 class SvgSource(RemoteSource, ViewChangeListener, ABC):
     json_path = None
+    json_is_compressed = False
     default_svg_color = "#000000"
     default_search_query = "a"
 
     def __init__(self, cache_dir, import_manager):
         super().__init__(cache_dir, import_manager)
+        self.icon_map = None
         self.query = ""
         self.last_selected_file = None
         self.color_ext = SvgColorReplace()
@@ -33,11 +36,14 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
         self.search_color_option: ColorOption = self.options_window.set_option(
             "search_color", None, OptionType.COLOR, "Set default search color")
         self.search_color_option.set_color(self.default_svg_color)
+        self.load_icon_map()
+
+    def load_icon_map(self):
         # -----------------------
         if self.json_path:
             json_exists = exists(self.json_path)
             if json_exists:
-                self.icon_map = read_map_file(self.json_path)
+                self.icon_map = self.read_map_file(self.json_path)
         # ---------
 
     @abstractmethod
@@ -199,6 +205,16 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
         else:
             self.clear_color_options()  # if list is empty ( when a new search is made )
 
+    @classmethod
+    def read_map_file(cls, path):
+        with open(path, mode='rb') as f:
+            if cls.json_is_compressed:
+                m = json.loads(zlib.decompress(f.read()))
+            else:
+                m = json.load(f)
+            s = dict(sorted(m.items()))
+        return s
+
     def on_window_attached(self, window: BasicWindow, window_pane):
         super().on_window_attached(window, window_pane)
         search_entry: Gtk.SearchEntry = self.options_window.options["query"].entry
@@ -239,7 +255,4 @@ def add_color_changes_to_items(color_changes: list[tuple], items: list[FlowBoxCh
         file.tasks.insert(0, color_replace)
 
 
-def read_map_file(path):
-    with open(path, mode='r') as f:
-        m = json.load(f)
-    return m
+
