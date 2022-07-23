@@ -137,6 +137,19 @@ class RemixIconsSource(JsonSvgIconsSource):
     window_cls = RemixWindow
 
 
+class BootstrapWindow(JsonSvgWindow):
+    name = "bootstrap_window"
+
+
+class BootstrapIconsSource(JsonSvgIconsSource):
+    name = 'Bootstrap Icons'
+    desc = "Free, high quality, open source icon library with over 1,600 icons. " \
+           "Include them anyway you like, SVGs, SVG sprite, or web fonts"
+    icon = "icons/bootstrap.png"
+    json_path = 'json/bootstrap.json'
+    window_cls = BootstrapWindow
+
+
 class HeroWindow(JsonSvgWindow):
     name = "hero_window"
 
