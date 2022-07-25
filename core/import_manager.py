@@ -245,8 +245,8 @@ class ImportManager(OptionsChangeListener):
         bytes_downloaded = 0
         with open(file_path, mode="wb") as out:
             with self.session.get(url, stream=True) as r:
-                total = r.headers["content-length"]
-                total = int(total)
+                total = r.headers.get("content-length")
+                total = int(total) if total else None
                 for data in r.iter_content(chunk_size=5000):
                     bytes_downloaded += len(data)
                     out.write(data)

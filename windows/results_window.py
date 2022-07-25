@@ -388,6 +388,7 @@ class ResultsHandler:
 
             self.window.multiview.flow_box.foreach(hide)
             if not no_more_results:
+                current_index = self.get_current_page_index()
                 self.try_next_page(self.source, current_index + 1)
         elif current_index == last_index:
             self.try_next_page(self.source, current_index + 1)

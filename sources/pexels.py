@@ -18,7 +18,7 @@ class PexelsWindow(BasicWindow, OptionsChangeListener):
         self.name = "basic_window"
         super().__init__(gapp)
 
-    def get_pixmaps(self):
+    def get_pixmap_manager(self):
         pix = PixmapManager(CACHE_DIR, pref_width=600, pref_height=500, scale=1)
         self.source.pix_manager = pix
         return pix

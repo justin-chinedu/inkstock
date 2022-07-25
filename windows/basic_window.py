@@ -25,7 +25,7 @@ class BasicWindow(ChildWindow):
             self.show_options_window(self.source.options_window.window, self.source)
         self.source.on_window_attached(self, self.widget("basic_paned"))
 
-    def get_pixmaps(self):
+    def get_pixmap_manager(self):
         """Retrieves the pixel map manager for the results window
         Custom windows should override to customize manager properties"""
         results_pixmanager = PixmapManager(CACHE_DIR)
@@ -75,7 +75,7 @@ class BasicWindow(ChildWindow):
     def add_page(self, page):
         if not self.results:
             source = self.source
-            self.results = self.gapp.load_window("results_window", pixmaps=self.get_pixmaps(), source=source)
+            self.results = self.gapp.load_window("results_window", pixmaps=self.get_pixmap_manager(), source=source)
         self.show_window(self.results, self.source.name)
         self.results.handler.add_page(page)
 

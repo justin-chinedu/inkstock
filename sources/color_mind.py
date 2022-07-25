@@ -21,7 +21,7 @@ class ColorMindWindow(BasicWindow):
         self.name = "basic_window"
         super().__init__(gapp)
 
-    def get_pixmaps(self):
+    def get_pixmap_manager(self):
         pix = PixmapManager(CACHE_DIR, scale=8,
                             grid_item_height=200,
                             grid_item_width=300,

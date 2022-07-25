@@ -17,7 +17,7 @@ class UndrawWindow(BasicWindow):
         self.name = "basic_window"
         super().__init__(gapp)
 
-    def get_pixmaps(self):
+    def get_pixmap_manager(self):
         return self.source.pix_manager
 
 

@@ -1,5 +1,3 @@
-import bs4
-
 from core.constants import CACHE_DIR
 from core.gui.pixmap_manager import PixmapManager
 from core.utils import asyncme
@@ -23,7 +21,7 @@ class BurstWindow(BasicWindow):
         self.name = "basic_window"
         super().__init__(gapp)
 
-    def get_pixmaps(self):
+    def get_pixmap_manager(self):
         pix = PixmapManager(CACHE_DIR, pref_width=600, pref_height=500, scale=1)
         self.source.pix_manager = pix
         return pix

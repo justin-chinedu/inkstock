@@ -212,7 +212,9 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
                 m = json.loads(zlib.decompress(f.read()))
             else:
                 m = json.load(f)
-            s = dict(sorted(m.items()))
+            s = m
+            if type(m) is dict:
+                s = dict(sorted(m.items()))
         return s
 
     def on_window_attached(self, window: BasicWindow, window_pane):
