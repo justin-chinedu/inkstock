@@ -53,9 +53,8 @@ class FontFile(RemoteFile):
         self.line_spacing = 40
         self.color = "#383838"
         self.bg_color = "#ffffff"
-        self.text = "Form and function\n" \
-                    "together create\n" \
-                    "typographic excellence"
+        self.text = "Type is what meaning\n" \
+                    "looks like."
         self.font_size = 80
 
     def set_text(self, text: str):

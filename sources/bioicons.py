@@ -62,7 +62,6 @@ class BioIconsPage(RemotePage):
         super().__init__(remote_source, page_no)
         self.results = results
         self.remote_source = remote_source
-        self.default_color_task = None
 
     def get_page_content(self):
         for result in self.results:
@@ -78,8 +77,6 @@ class BioIconsPage(RemotePage):
             }
 
             icon = BioIcon(self.remote_source, info)
-            if self.default_color_task:
-                icon.tasks.append(self.default_color_task)
             yield icon
 
 
@@ -210,6 +207,7 @@ class BioIconsSource(RemoteSource):
         # ---------
 
     def file_selected(self, file: RemoteFile):
+        super().file_selected(file)
         info = file.info
         text = f'<span  size="large" weight="normal" >Illustration by</span>\n\n' + \
                f'<span  size="large" weight="bold" >{info["author"]}</span>\n\n' + \
