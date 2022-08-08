@@ -11,7 +11,6 @@ from sources.source_file import RemoteFile
 from tasks.svg_color_replace import SvgColorReplace
 from windows.basic_window import BasicWindow
 from windows.options_window import OptionsWindow, OptionType, ColorOption
-from windows.view_change_listener import ViewChangeListener
 
 
 class ColorMindWindow(BasicWindow):
@@ -112,7 +111,7 @@ def hex_to_rgb(hex_color: str):
     return rgb
 
 
-class ColorMindPalettesSource(RemoteSource, ViewChangeListener):
+class ColorMindPalettesSource(RemoteSource):
     name = 'Color Mind'
     desc = "ColorMind is a color scheme generator that uses deep learning." \
            " It can learn color styles from photographs, movies, and popular art."

@@ -78,23 +78,7 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
 
         self.options = options
 
-        multi_items = []  # the multiview thumbnails
-        single_items = []  # the single view thumbnails
-        single_item = None  # the preview image
-        results_is_multi_view = self.window.results.is_multi_view()
-        if results_is_multi_view:
-            items = self.window.results.get_multi_view_displayed_data(only_selected=True)
-            multi_items.extend(items)
-        else:
-            items = self.window.results.singleview.list.get_selected_children()
-            single_items.extend(items)
-            # ony interested in the first because multiple selection is off
-            single_item = items[0]
-            # get corresponding multiview items
-            m_items = self.window.results.get_multi_view_displayed_data(only_selected=False)
-            single_files = list(map(lambda x: x.data, single_items))
-            m_items = list(filter(lambda x: x.data in single_files, m_items))
-            multi_items.extend(m_items)
+        multi_items, single_item, single_items = self.get_selected_items()
 
         # check for color changes in options and apply color replace task to item
         color_changes = [(key, value) for key, value in options.items()
@@ -105,26 +89,6 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
             add_color_changes_to_items(color_changes, single_items)
             self.update_items_sequentially(single_items, single_item, multi_items)
             return
-
-    def update_items_sequentially(self, single_items, single_item, multi_items):
-        # single view image, single view thumbs and multi view thumbs need to be updated in that order
-        # to avoid race conditions and unprecedented problems
-        def cb_single_items(*args):
-            self.update_item(*args)
-            for item in multi_items:
-                self.pix_manager.get_pixbuf_for_type(item.data, "multi", self.update_item, item)
-
-        def cb_single_item(*args):
-            self.window.results.singleview.set_image(*args)
-            self.pix_manager.get_pixbuf_for_type(single_items[0].data, "thumb",
-                                                 cb_single_items, single_items[0])
-
-        if single_item:
-            self.pix_manager.get_pixbuf_for_type(single_item.data, "single",
-                                                 cb_single_item)
-        else:
-            for item in multi_items:
-                self.pix_manager.get_pixbuf_for_type(item.data, "multi", self.update_item, item)
 
     def clear_color_options(self):
         self.options_window.remove_option("color_group")
@@ -171,7 +135,7 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
                 # TODO: Maybe try and convert hex to rgba before setting chooser color to support alpha
                 # trim off alpha because Gtk color chooser doesn't support alpha in hex
                 displayed_stroke = modified_stroke_colors[stroke]
-            color_option = self.options_window.set_option("fill_" + stroke, displayed_stroke, OptionType.COLOR,
+            color_option = self.options_window.set_option("stroke_" + stroke, displayed_stroke, OptionType.COLOR,
                                                           f"Color {index + 1}",
                                                           attach=False, show_separator=False)
             widgets.append(color_option)
@@ -222,6 +186,9 @@ class SvgSource(RemoteSource, ViewChangeListener, ABC):
         search_entry: Gtk.SearchEntry = self.options_window.options["query"].entry
         search_entry.set_text(self.default_search_query)
         asyncme.run_or_none(self.search)(self.default_search_query)
+
+    def on_view_changed(self, view):
+        pass
 
 
 def add_color_changes_to_items(color_changes: list[tuple], items: list[FlowBoxChildWithData]):

@@ -1,4 +1,3 @@
-import asyncio
 import math
 import os
 
@@ -109,7 +108,6 @@ class PixmapManager:
             if result:
                 GLib.idle_add(self._get_pixbuf_for_type, result)
 
-        # TODO: Handle error in single view.... as it depends on exact no of pixbufs returned
         source = remote_file.source
         source.add_task_to_queue(self._apply_tasks_to_item, cb, remote_file, display_type, callback, *args),
 

@@ -31,10 +31,11 @@
       <object class="GtkLabel" id="options_color_label">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
+        <property name="halign">start</property>
         <property name="label" translatable="yes">Select a color</property>
       </object>
       <packing>
-        <property name="expand">False</property>
+        <property name="expand">True</property>
         <property name="fill">True</property>
         <property name="position">0</property>
       </packing>
@@ -44,6 +45,7 @@
         <property name="visible">True</property>
         <property name="can-focus">True</property>
         <property name="receives-default">True</property>
+        <property name="margin-end">20</property>
         <property name="use-alpha">True</property>
         <property name="title" translatable="yes">Select a color</property>
         <signal name="color-set" handler="color_set" swapped="no"/>
@@ -92,32 +94,24 @@
     <property name="label-fill">True</property>
     <child>
       <object class="GtkRevealer">
-        <property name="height-request">300</property>
         <property name="visible">True</property>
         <property name="can-focus">False</property>
         <property name="transition-duration">500</property>
         <property name="reveal-child">True</property>
         <child>
-          <object class="GtkScrolledWindow">
+          <object class="GtkViewport">
             <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="margin-top">10</property>
-            <property name="margin-bottom">10</property>
+            <property name="can-focus">False</property>
             <child>
-              <object class="GtkViewport">
+              <object class="GtkBox" id="options_group_list">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <property name="margin-start">20</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">10</property>
+                <property name="orientation">vertical</property>
                 <child>
-                  <object class="GtkBox" id="options_group_list">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="margin-top">10</property>
-                    <property name="margin-bottom">10</property>
-                    <property name="orientation">vertical</property>
-                    <child>
-                      <placeholder/>
-                    </child>
-                  </object>
+                  <placeholder/>
                 </child>
               </object>
             </child>
@@ -129,6 +123,7 @@
       <object class="GtkLabel">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
+        <property name="margin-start">10</property>
         <property name="label" translatable="yes">expander</property>
       </object>
     </child>
@@ -191,12 +186,56 @@
       </packing>
     </child>
   </object>
-  <object class="GtkListBox" id="options_select_list">
+  <object class="GtkBox" id="options_select_list_box">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
-    <style>
-      <class name="options_select_list"/>
-    </style>
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkLabel" id="options_select_list_title">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="halign">start</property>
+        <property name="margin-bottom">15</property>
+        <property name="label" translatable="yes">label</property>
+        <property name="width-chars">0</property>
+      </object>
+      <packing>
+        <property name="expand">True</property>
+        <property name="fill">True</property>
+        <property name="position">0</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkListBox" id="options_select_list">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <style>
+          <class name="options_select_list"/>
+        </style>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+    <child>
+      <placeholder/>
+    </child>
+    <child>
+      <object class="GtkToggleButton" id="options_select_list_more">
+        <property name="label" translatable="yes">Show more</property>
+        <property name="visible">True</property>
+        <property name="can-focus">True</property>
+        <property name="receives-default">True</property>
+        <signal name="toggled" handler="on_show_more" swapped="no"/>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">3</property>
+      </packing>
+    </child>
   </object>
   <object class="GtkSeparator" id="options_separator">
     <property name="visible">True</property>

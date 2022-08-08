@@ -31,7 +31,12 @@ class OptionsWindow(OptionsChangeListener):
     def __add__widget(self, widget):
         self.box.pack_start(widget, False, False, 0)
 
-    def set_option(self, name, values, option_type, label=None, show_separator=True, attach=True):
+    def set_option(self, name, values, option_type, label=None, show_separator=True, attach=True, allow_multiple=True,
+                   **kwargs):
+        if not allow_multiple:
+            # remove any other duplicate if Widget is attached
+            self.remove_option(name)
+
         if option_type == OptionType.CHECKBOX:
             option = CheckBoxOption(name, values, self)
         elif option_type == OptionType.COLOR:
@@ -54,7 +59,7 @@ class OptionsWindow(OptionsChangeListener):
                 for value in values:
                     self.__attached_options.append(value)
         elif option_type == OptionType.SELECT:
-            option = SelectOption(name, values, self, label)
+            option = SelectOption(name, values, self, **kwargs)
         else:
             raise ValueError("Widget display_type not available")
 
@@ -65,20 +70,12 @@ class OptionsWindow(OptionsChangeListener):
         if show_separator and attach:
             self.__add__widget(option.view)
             self.__attached_options.append(option)
-            separator = self.get_separator()
-            self.__add__widget(separator)
+            option.view.set_margin_bottom(30)
 
         self.options[name] = option
         self.options_values[name] = option.value
         return option
         # self.receiver.on_change(self.options)
-
-    def get_separator(self):
-        builder = Gtk.Builder()
-        builder.add_objects_from_file("ui/options.ui", ["options_separator"])
-        separator: Gtk.Separator = builder.get_object("options_separator")
-        separator.set_hexpand(False)
-        return separator
 
     def on_change(self, option):
         self.options_values[option.name] = option.value
@@ -114,6 +111,20 @@ class OptionsWindow(OptionsChangeListener):
 
     def get_options(self):
         return self.options_values
+
+    def reorder_option(self, option_name, position: int):
+        option = self.options.get(option_name)
+        if option and option in self.__attached_options:
+            self.box.reorder_child(option.view, position)
+
+    def make_scrollable(self, max_height: int, option_name: str):
+        scroll = Gtk.ScrolledWindow()
+        self.remove_option(option_name)
+        option = self.options[option_name]
+        scroll.set_max_content_height(max_height)
+        scroll.add_with_viewport(option)
+        self.options[option_name] = scroll
+        self.attach_option(option_name)
 
 
 class Option:
@@ -180,7 +191,7 @@ class DropDownOption(Option):
             self.combo.append_text(value)
         self.value = values[0]
         self.combo.set_active(0)
-        self.receiver.on_change(self)
+        # self.receiver.on_change(self)
 
     def changed(self, combo):
         selected_text = combo.get_active_text()
@@ -199,7 +210,7 @@ class CheckBoxOption(Option):
             self.checkboxes.append(checkbox)
             self.view.add(checkbox)
 
-    def toggle_all(self, active : bool):
+    def toggle_all(self, active: bool):
         for c in self.checkboxes:
             c.set_active(active)
 
@@ -265,41 +276,74 @@ class Group(Option):
         super().__init__(name, options, "options_group", change_receiver)
         self.view.set_label(label)
         self.group_list = self.widget("options_group_list")
+        self.group_list.show_all()
         for option in options:
             self.add_option(option)
 
     def add_option(self, option):
-        self.group_list.show_all()
         self.group_list.pack_start(option.view, False, False, 0)
-        self.group_list.pack_start(self.get_separator(), False, False, 0)
-
-    def get_separator(self):
-        builder = Gtk.Builder()
-        builder.add_objects_from_file(self.ui_file, ["options_separator"])
-        separator: Gtk.Separator = builder.get_object("options_separator")
-        separator.set_hexpand(False)
-        return separator
+        option.view.set_margin_bottom(30)
+        option.view.show_all()
 
 
 class SelectOption(Option):
-    def __init__(self, name, options, change_receiver, label):
-        super().__init__(name, options, "options_select_list", change_receiver)
-        self.view.connect("row-selected", self.option_selected)
+    def __init__(self, name, options, change_receiver, **kwargs):
+        super().__init__(name, options, "options_select_list_box", change_receiver)
+        self.list = self.widget("options_select_list")
+        self.list_title = self.widget("options_select_list_title")
+        self.list_more = self.widget("options_select_list_more")
+        self.list.connect("row-selected", self.option_selected)
         self.options = options
+        if "title" in kwargs:
+            self.list_title.set_text(kwargs["title"])
+        else:
+            self.list_title.hide()
+
+        self.rows = []
         for option in self.options:
             self.add_option(option)
 
+        if not self.options:
+            self.list_title.hide()
+            self.list_more.hide()
+        elif len(self.options) > 5:
+            self.show_max_rows(5)
+        else:
+            self.list_more.hide()
+
     def add_option(self, option):
         row = SelectOptionRow(option)
-        self.view.add(row)
+        self.list.add(row)
+        self.rows.append(row)
+
+    def on_show_more(self, toggle_btn):
+        if toggle_btn.get_active():
+            self.show_all_rows()
+            self.list_more.set_label("Show less")
+        else:
+            self.show_max_rows(5)
+            self.list_more.set_label("Show more")
+
+    def show_max_rows(self, no_of_rows: int):
+        for index, row in enumerate(self.rows):
+            if index >= no_of_rows:
+                row.hide()
+
+    def show_all_rows(self):
+        for row in self.rows:
+            row.show()
 
     def select_option(self, option):
-        if option in self.options:
+        if isinstance(self.options, tuple):
+            options = list(map(lambda x: x[1], self.options))
+            index = options.index(option)
+            self.list.select_row(self.list.get_row_at_index(index))
+        elif option in self.options:
             index = self.options.index(option)
-            self.view.select_row(self.view.get_row_at_index(index))
+            self.list.select_row(self.list.get_row_at_index(index))
 
     def unselect_all(self):
-        self.view.unselect_all()
+        self.list.unselect_all()
 
     def option_selected(self, listbox, row):
         if not row:
@@ -320,6 +364,9 @@ class SelectOptionRow(Gtk.ListBoxRow):
         if isinstance(view, str):
             label = Gtk.Label(label=view)
             self.add(label)
+        elif isinstance(view, tuple):
+            self.add(view[0])
+            self.data = view[1]
         else:
             self.add(view)
         self.show_all()

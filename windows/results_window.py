@@ -17,8 +17,8 @@ class ResultsWindow(ChildWindow):
 
     def __init__(self, gapp):
         super().__init__(gapp)
-        self.singleview = None
-        self.multiview = None
+        self.singleview: SingleItemView = None
+        self.multiview: MultiItemView = None
         self.source = None
         self.handler: ResultsHandler = None
 
@@ -35,8 +35,8 @@ class ResultsWindow(ChildWindow):
         child = page_stack.get_child_by_name(name)
         if page_stack.get_visible_child() != child:
             page_stack.set_visible_child(child)
-            if isinstance(self.source, ViewChangeListener):
-                self.source.on_view_changed(child)
+        if isinstance(self.source, ViewChangeListener):
+            self.source.on_view_changed(window)
 
     def refresh_window(self):
         if self.is_multi_view():
@@ -111,7 +111,7 @@ class SingleItemView:
         self.list.set_focus_on_click(True)
         self.scroll: Gtk.ScrolledWindow = self.builder.get_object("results_single_scroll_previews")
         self.back_btn: Gtk.Button = self.builder.get_object("results_single_back")
-        self.back_btn.connect("clicked", lambda btn: self.window.multiview.show_view())
+        self.back_btn.connect("clicked", self.back_btn_clicked)
         self.builder.connect_signals(window.handler)
         self.single_view.show()
 
@@ -119,6 +119,12 @@ class SingleItemView:
         self.length = None
         self.children = None
         self.selected_child = None
+        self.multi_items_to_update = set()
+
+    def back_btn_clicked(self, btn):
+        self.window.multiview.show_view()
+        self.window.source.update_items_sequentially(None, [], multi_items=self.multi_items_to_update)
+        self.multi_items_to_update.clear()
 
     @asyncme.mainloop_only
     def clear(self):

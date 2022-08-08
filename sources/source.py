@@ -15,6 +15,7 @@ from cachecontrol.caches.file_cache import FileCache
 from cachecontrol.heuristics import ExpiresAfter
 from gi.repository import Gtk, Gdk
 
+from core.gui.pixmap_manager import PixmapManager
 from core.utils import asyncme
 from sources.source_file import RemoteFile
 from core.network.adapter import FileAdapter
@@ -44,7 +45,7 @@ class RemoteSource(ABC):
     window_cls = BasicWindow
     window: BasicWindow = None
     selected_files = []
-    pix_manager = None
+    pix_manager: PixmapManager = None
 
     sources = {}
     windows = []
@@ -136,6 +137,49 @@ class RemoteSource(ABC):
         self.selected_files = files
         self.import_manager.add_files(self, files)
 
+    def refresh_selected_items(self):
+        multi_items, single_item, single_items = self.get_selected_items()
+        self.update_items_sequentially(single_items, single_item, multi_items)
+
+    def get_selected_items(self):
+        multi_items = []  # the multiview thumbnails
+        single_items = []  # the single view thumbnails
+        single_item = None  # the preview image
+        results_is_multi_view = self.window.results.is_multi_view()
+        if results_is_multi_view:
+            items = self.window.results.get_multi_view_displayed_data(only_selected=True)
+            multi_items.extend(items)
+        else:
+            items = self.window.results.singleview.list.get_selected_children()
+            single_items.extend(items)
+            # ony interested in the first because multiple selection is off
+            single_item = items[0]
+            # get corresponding multiview items
+            m_items = self.window.results.get_multi_view_displayed_data(only_selected=False)
+            single_files = list(map(lambda x: x.data, single_items))
+            m_items = list(filter(lambda x: x.data in single_files, m_items))
+            multi_items.extend(m_items)
+        return multi_items, single_item, single_items
+
+    def update_items_sequentially(self, single_items, single_item, multi_items):
+        # single view image, single view thumbs and multi view thumbs need to be updated in that order
+        # to avoid race conditions and unprecedented problems
+        def cb_single_items(*args):
+            self.window.results.singleview.set_image(*args[-1])
+            self.update_item(*args[:-1])
+
+        def cb_single_item(*sv_args):
+            self.pix_manager.get_pixbuf_for_type(single_items[0].data, "thumb",
+                                                 cb_single_items, single_items[0], sv_args)
+
+        if single_item:
+            self.window.results.singleview.multi_items_to_update.update(multi_items)
+            self.pix_manager.get_pixbuf_for_type(single_item.data, "single",
+                                                 cb_single_item)
+        else:
+            for item in multi_items:
+                self.pix_manager.get_pixbuf_for_type(item.data, "multi", self.update_item, item)
+
     def __del__(self):
         self.session.close()
 
@@ -202,9 +246,6 @@ class RemoteSource(ABC):
         # Fixme: Deleting item immediately here, makes it not appear
         # Wait for some signal from gtk before deleting
         # asyncme.run_or_none(os.remove)(pic_path)
-
-    def fetch_and_update_multi_item(self, item):
-        pass
 
 
 def sanitize_query(query: str):

@@ -33,11 +33,11 @@ class InkStockWindow(Window):
         settings.connect("notify::gtk-theme-name", self._on_theme_name_changed)
         self.app_css_dark = """
          @import url("theme/Matcha/gtk/gtk-3.0/gtk-dark-pueril.css");
-         @import url("theme/instocks.css");
+         @import url("theme/inkstock_dark.css");
         """
         self.app_css_light = """
          @import url("theme/Matcha/gtk/gtk-3.0/gtk-light-pueril.css");
-         @import url("theme/instocks.css");
+         @import url("theme/inkstock.css");
         """
         self._on_theme_name_changed(settings, None)
 
@@ -144,7 +144,7 @@ class OptionsHandler(OptionsChangeListener):
         self.disabled = False
 
         self.window.show_options_window(self.options_window.window)
-        self.window.sources_options.show_all()
+        self.window.sources_options.show()
 
     def show_displayed_sources(self):
         for value in self.source_type_values:
@@ -152,7 +152,7 @@ class OptionsHandler(OptionsChangeListener):
             select_option = self.options_window.set_option(f"sources_select_{value}",
                                                            list(map(lambda x: x.name, sources)),
                                                            OptionType.SELECT,
-                                                           show_separator=False)
+                                                           show_separator=True, title=value.upper())
             if self.last_selected_source \
                     and self.last_selected_source in self.displayed_sources \
                     and self.last_selected_source.source_type.value == value:

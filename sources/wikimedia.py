@@ -181,10 +181,11 @@ class WikiMediaSource(RemoteSource):
     def file_selected(self, file: RemoteFile):
         super().file_selected(file)
         info = file.info
+        lic = LICENSES.get(info["license"])
         text = f'<span  size="large" weight="normal" >Illustration by</span>\n\n' + \
                f'<span  size="large" weight="bold" >{info["author"]}</span>\n\n' + \
                f'<span  size="large" weight="normal" >{info["name"]}</span>\n\n' + \
-               f'<span  size="medium" weight="normal" >Available under the {LICENSES[info["license"]]["name"]} license, ' \
-               f'<a href="{LICENSES[info["license"]]["url"]}">More Info</a></span>'
+               f'<span  size="medium" weight="normal" >Available under the {lic["name"]} license, ' if lic else '' \
+               f'<a href="{lic["url"]}">More Info</a></span>' if lic else ''
         text.replace("&", "&amp;")
         self.options_window.options["info"].view.set_markup(text)

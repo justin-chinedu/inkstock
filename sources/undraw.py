@@ -52,12 +52,13 @@ class UndrawPage(RemotePage, OptionsChangeListener):
 
 
 def setup_pixmanager():
-    pix = PixmapManager(CACHE_DIR, pref_width=200,
-                        pref_height=200, scale=1,
+    pix = PixmapManager(CACHE_DIR,
+                        scale=0.7,
                         grid_item_height=250,
                         grid_item_width=250,
-                        padding=20,
+                        padding=200,
                         aspect_ratio=SIZE_ASPECT_GROW)
+    pix.enable_aspect = False
     pix.style = """.{id}{{
         background-color: white;
         background-size: contain;
