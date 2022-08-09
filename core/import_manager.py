@@ -96,9 +96,6 @@ class ImportManager(OptionsChangeListener):
         # ========== Prepare Options Window ========== #
         # remove any previously added options if present
         self.options_window.remove_option("sources_select")
-        self.options_window.remove_option("import_all")
-        self.options_window.remove_option("import_zip")
-        self.options_window.remove_option("back_to_sources")
 
         # create new
         select_option = self.options_window.set_option("sources_select",
@@ -107,11 +104,13 @@ class ImportManager(OptionsChangeListener):
                                                        show_separator=False)
         if self.ink_ext:
             self.options_window.set_option("import_all", self.import_all, OptionType.BUTTON,
-                                           "Import into Inkscape", show_separator=False)
+                                           "Import into Inkscape", show_separator=False, allow_multiple=False)
         self.options_window.set_option("import_zip", self.show_zip_dialog, OptionType.BUTTON,
-                                       "Save as zip", show_separator=False)
+                                       "Save as zip", show_separator=False, allow_multiple=False)
+        self.options_window.set_option("import_folder", self.show_folder_dialog, OptionType.BUTTON,
+                                       "Save to Folder", show_separator=False, allow_multiple=False)
         self.options_window.set_option("back_to_sources", self.back_to_sources, OptionType.BUTTON,
-                                       "Back to sources", show_separator=False)
+                                       "Back to sources", show_separator=False, allow_multiple=False)
 
         # select first item from sources to import
         select_option.list.select_row(
@@ -179,6 +178,43 @@ class ImportManager(OptionsChangeListener):
         else:
             self.ink_window.import_files_btn.set_sensitive(False)
 
+    def show_folder_dialog(self, name):
+        dialog = Gtk.FileChooserDialog(
+            title="Save in folder", transient_for=self.ink_window.window,
+            action=Gtk.FileChooserAction.SELECT_FOLDER
+        )
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_SAVE, Gtk.ResponseType.OK
+        )
+        home_dir = os.path.expanduser('~')
+        dialog.set_current_folder(home_dir)
+        dialog.set_default_size(800, 400)
+        response = dialog.run()
+        filename = None
+        if response == Gtk.ResponseType.OK:
+            filename = dialog.get_filename()
+        dialog.destroy()
+        if not filename:
+            return
+        self.set_window_sensitive(False)
+
+        def cb(result, error):
+            if error:
+                print(f"Error occurred during download: {error}")
+
+            self.set_window_sensitive(True)
+            asyncme.mainloop_only(self.ink_window.progress.hide)()
+
+        self.add_task_to_queue(self.save_to_folder, cb, filename)
+
+    async def save_to_folder(self, folder_path):
+        for source, files in self.sources.items():
+            path = os.path.join(folder_path, source.source_type.value)
+            if not os.path.exists(path):
+                os.makedirs(path)
+            for file in files:
+                await self.download(file, os.path.join(path, file.file_name))
+
     def show_zip_dialog(self, name):
         dialog = Gtk.FileChooserDialog(
             title="Save zip as", transient_for=self.ink_window.window,
@@ -202,9 +238,9 @@ class ImportManager(OptionsChangeListener):
         if response == Gtk.ResponseType.OK:
             filename = dialog.get_filename()
         dialog.destroy()
+        if not filename:
+            return
         self.set_window_sensitive(False)
-
-        # self.import_zip(filename)
 
         def cb(result, error):
             if error:

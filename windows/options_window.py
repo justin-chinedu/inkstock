@@ -283,7 +283,7 @@ class Group(Option):
     def add_option(self, option):
         self.group_list.pack_start(option.view, False, False, 0)
         option.view.set_margin_bottom(30)
-
+        option.view.show_all()
 
 
 class SelectOption(Option):
