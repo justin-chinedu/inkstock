@@ -1,15 +1,14 @@
-import gi
-from core.utils import asyncme
-from core.gui.window import ChildWindow
-from core.constants import CACHE_DIR
-from sources.source import RemoteSource
-from sources.source_page import RemotePage, NoResultsPage
-from sources.source_file import RemoteFile, NoMoreResultsFile
-from core.gui.pixmap_manager import PixmapManager
-from windows.view_change_listener import ViewChangeListener
-
-gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk
+from gi.repository.GdkPixbuf import Pixbuf, InterpType
+
+from core.constants import CACHE_DIR
+from core.gui.pixmap_manager import PixmapManager
+from core.gui.window import ChildWindow
+from core.utils import asyncme
+from sources.source import RemoteSource
+from sources.source_file import RemoteFile, NoMoreResultsFile
+from sources.source_page import RemotePage, NoResultsPage
+from windows.view_change_listener import ViewChangeListener
 
 
 class ResultsWindow(ChildWindow):
@@ -112,6 +111,16 @@ class SingleItemView:
         self.scroll: Gtk.ScrolledWindow = self.builder.get_object("results_single_scroll_previews")
         self.back_btn: Gtk.Button = self.builder.get_object("results_single_back")
         self.back_btn.connect("clicked", self.back_btn_clicked)
+        self.zoom_in: Gtk.Button = self.builder.get_object("results_single_zoom_in")
+        self.zoom_in.connect("clicked", self.zoom_in_clicked)
+        self.zoom_out: Gtk.Button = self.builder.get_object("results_single_zoom_out")
+        self.zoom_out.connect("clicked", self.zoom_out_clicked)
+        self.view_bg: Gtk.Widget = self.builder.get_object("results_single_view_bg")
+        self.bg_color: Gtk.ColorButton = self.builder.get_object("results_single_bg_color")
+        self.bg_color.connect("color-set", self.bg_color_changed)
+        self.zoom_txt: Gtk.Entry = self.builder.get_object("results_single_zoom_text")
+        self.zoom_txt.connect("activate", self.zoom_text_changed)
+
         self.builder.connect_signals(window.handler)
         self.single_view.show()
 
@@ -120,11 +129,40 @@ class SingleItemView:
         self.children = None
         self.selected_child = None
         self.multi_items_to_update = set()
+        self.selected_pixbuf: Pixbuf = None
+        self.zoom_percent = 100
 
     def back_btn_clicked(self, btn):
         self.window.multiview.show_view()
         self.window.source.update_items_sequentially(None, [], multi_items=self.multi_items_to_update)
         self.multi_items_to_update.clear()
+
+    def bg_color_changed(self, btn):
+        rgba = btn.get_rgba()
+        self.view_bg.override_background_color(Gtk.StateFlags.NORMAL, rgba)
+
+    def zoom_in_clicked(self, btn):
+        self.zoom_percent += 10
+        self.__zoom_image()
+
+    def zoom_out_clicked(self, btn):
+        self.zoom_percent -= 10
+        self.__zoom_image()
+
+    def zoom_text_changed(self, zoom_entry):
+        zoom = zoom_entry.get_text()
+        try:
+            self.zoom_percent = int(zoom)
+            self.__zoom_image()
+        except:
+            pass
+
+    def __zoom_image(self):
+        self.zoom_txt.set_text(str(self.zoom_percent))
+        width = self.selected_pixbuf.get_width() * (self.zoom_percent / 100)
+        height = self.selected_pixbuf.get_height() * (self.zoom_percent / 100)
+        pb = self.selected_pixbuf.scale_simple(int(width), int(height), InterpType.BILINEAR)
+        self.image.set_from_pixbuf(pb)
 
     @asyncme.mainloop_only
     def clear(self):
@@ -170,6 +208,9 @@ class SingleItemView:
         self.pixmaps.get_pixbuf_for_type(file, "single", self.set_image)
 
     def set_image(self, pixbuf):
+        self.selected_pixbuf = pixbuf
+        self.zoom_percent = 100
+        self.zoom_txt.set_text(str(self.zoom_percent))
         self.image.set_from_pixbuf(pixbuf)
 
     @asyncme.mainloop_only

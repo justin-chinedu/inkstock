@@ -114,8 +114,8 @@ class ImportManager(OptionsChangeListener):
                                        "Back to sources", show_separator=False)
 
         # select first item from sources to import
-        select_option.view.select_row(
-            select_option.view.get_row_at_index(0))
+        select_option.list.select_row(
+            select_option.list.get_row_at_index(0))
 
     def back_to_sources(self, name):
         self.ink_window.show_sources_window()

@@ -317,7 +317,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkScrolledWindow">
+                      <object class="GtkScrolledWindow" id="results_single_view_bg">
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
                         <property name="shadow-type">in</property>
@@ -414,10 +414,165 @@
                       </packing>
                     </child>
                     <child>
-                      <placeholder/>
+                      <object class="GtkBox">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="valign">center</property>
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">5</property>
+                        <property name="homogeneous">True</property>
+                        <child>
+                          <object class="GtkButton" id="results_single_zoom_in">
+                            <property name="visible">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="receives-default">True</property>
+                            <property name="tooltip-text" translatable="yes">Zoom in</property>
+                            <property name="valign">start</property>
+                            <property name="margin-left">20</property>
+                            <property name="margin-right">20</property>
+                            <property name="margin-start">20</property>
+                            <property name="margin-end">20</property>
+                            <property name="margin-top">20</property>
+                            <property name="relief">none</property>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="pixbuf">../icons/zoom_in.svg</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="results_single_zoom_out">
+                            <property name="visible">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="receives-default">True</property>
+                            <property name="tooltip-text" translatable="yes">Zoom out</property>
+                            <property name="valign">start</property>
+                            <property name="margin-left">20</property>
+                            <property name="margin-right">20</property>
+                            <property name="margin-start">20</property>
+                            <property name="margin-end">20</property>
+                            <property name="margin-top">20</property>
+                            <property name="relief">none</property>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="pixbuf">../icons/zoom_out.svg</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="margin-start">15</property>
+                            <property name="margin-end">15</property>
+                            <property name="margin-top">10</property>
+                            <property name="margin-bottom">10</property>
+                            <property name="spacing">5</property>
+                            <child>
+                              <object class="GtkEntry" id="results_single_zoom_text">
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="margin-top">5</property>
+                                <property name="width-chars">3</property>
+                                <property name="max-width-chars">3</property>
+                                <property name="text" translatable="yes">100</property>
+                                <property name="shadow-type">none</property>
+                                <property name="primary-icon-tooltip-text" translatable="yes">Zoom percentage</property>
+                                <property name="placeholder-text" translatable="yes">Percent %</property>
+                                <property name="input-purpose">number</property>
+                              </object>
+                              <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="label" translatable="yes">%</property>
+                                <property name="width-chars">1</property>
+                                <property name="max-width-chars">1</property>
+                              </object>
+                              <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">2</property>
+                          </packing>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="left-attach">2</property>
+                        <property name="top-attach">1</property>
+                      </packing>
                     </child>
                     <child>
-                      <placeholder/>
+                      <object class="GtkBox">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="margin-start">5</property>
+                        <property name="margin-end">5</property>
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="label" translatable="yes">BG Color</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkColorButton" id="results_single_bg_color">
+                            <property name="visible">True</property>
+                            <property name="can-focus">True</property>
+                            <property name="receives-default">True</property>
+                            <property name="margin-start">10</property>
+                            <property name="margin-end">10</property>
+                            <property name="margin-top">10</property>
+                            <property name="title" translatable="yes">Pick a background  color </property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="left-attach">2</property>
+                        <property name="top-attach">2</property>
+                      </packing>
                     </child>
                     <child>
                       <placeholder/>

@@ -33,6 +33,7 @@ class GoogleFontsWindow(BasicWindow, OptionsChangeListener):
             background-image: url("{url}");
             }}
         """
+        pix.single_preview_scale = 0.6
         self.source.pix_manager = pix
         return pix
 
