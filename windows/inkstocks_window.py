@@ -156,7 +156,7 @@ class SourcesHandler(OptionsChangeListener):
             select_option = self.options_window.set_option(f"sources_select_{value}",
                                                            list(map(lambda x: x.name, sources)),
                                                            OptionType.SELECT,
-                                                           show_separator=True, title=value.upper())
+                                                           show_separator=True, title=value.upper(), is_scrollable=True)
             if self.last_selected_source \
                     and self.last_selected_source in self.displayed_sources \
                     and self.last_selected_source.source_type.value == value:

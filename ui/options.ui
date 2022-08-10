@@ -221,7 +221,28 @@
       </packing>
     </child>
     <child>
-      <placeholder/>
+      <object class="GtkScrolledWindow" id="options_select_list_scroll_window">
+        <property name="visible">True</property>
+        <property name="can-focus">True</property>
+        <property name="shadow-type">in</property>
+        <child>
+          <object class="GtkViewport">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <child>
+              <object class="GtkListBox" id="options_select_list_scroll">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">2</property>
+      </packing>
     </child>
     <child>
       <object class="GtkToggleButton" id="options_select_list_more">

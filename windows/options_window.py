@@ -294,11 +294,27 @@ class Group(Option):
 class SelectOption(Option):
     def __init__(self, name, options, change_receiver, **kwargs):
         super().__init__(name, options, "options_select_list_box", change_receiver)
-        self.list = self.widget("options_select_list")
+        self.is_scrollable = False
+        if "is_scrollable" in kwargs:
+            self.is_scrollable = kwargs["is_scrollable"]
+
         self.list_title = self.widget("options_select_list_title")
         self.list_more = self.widget("options_select_list_more")
+        self.list = self.widget("options_select_list")
+        self.list_scroll = self.widget("options_select_list_scroll")
+        self.list_scroll_window: Gtk.ScrolledWindow = self.widget("options_select_list_scroll_window")
+
+        if self.is_scrollable:
+            self.list_scroll_window.show_all()
+            self.list.hide()
+            self.list_more.hide()
+            self.list = self.list_scroll
+        else:
+            self.list_scroll_window.hide()
+
         self.list.connect("row-selected", self.option_selected)
         self.options = options
+
         if "title" in kwargs:
             self.list_title.set_text(kwargs["title"])
         else:
@@ -308,12 +324,17 @@ class SelectOption(Option):
         for option in self.options:
             self.add_option(option)
 
-        if not self.options:
+        if len(self.options) == 0:
             self.list_title.hide()
             self.list_more.hide()
+            self.list_scroll_window.hide()
         elif len(self.options) > 5:
-            self.show_max_rows(5)
+            if self.is_scrollable:
+                self.list_scroll_window.set_min_content_height(250)
+            else:
+                self.show_max_rows(5)
         else:
+            self.list_scroll_window.set_min_content_height(50 * len(options))
             self.list_more.hide()
 
     def add_option(self, option):
