@@ -1,3 +1,4 @@
+import cairo
 from gi.repository import Gtk, Gdk
 from gi.repository.GdkPixbuf import Pixbuf, InterpType
 
@@ -79,7 +80,8 @@ class FlowBoxChildWithData(Gtk.FlowBoxChild):
         super().__init__()
         self.id = None
         self.pic_path = None
-        self.data = data
+        self.pixbuf: Pixbuf = None
+        self.data = data # RemoteFile
         builder = Gtk.Builder()
         builder.add_objects_from_file(
             'ui/results_window.ui', ["view_image_btn", "view_icon", "result_item"])
@@ -207,7 +209,7 @@ class SingleItemView:
     def show_file(self, file):
         self.pixmaps.get_pixbuf_for_type(file, "single", self.set_image)
 
-    def set_image(self, pixbuf):
+    def set_image(self, pixbuf: Pixbuf):
         self.selected_pixbuf = pixbuf
         self.zoom_percent = 100
         self.zoom_txt.set_text(str(self.zoom_percent))

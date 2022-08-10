@@ -19,20 +19,19 @@ class OptionsWindow(OptionsChangeListener):
         self.__attached_options = []
         self.receiver = change_receiver
 
-        # self.builder.add_objects_from_file(self.ui_file, ["options_listbox", "options_separator"])
-        # self.window: Gtk.ListBox = self.builder.get_object("options_listbox")
-
         self.builder.add_from_file(self.ui_file)
         self.window: Gtk.ScrolledWindow = self.builder.get_object("options_scroll")
         self.window.show_all()
         self.box: Gtk.Box = self.window.get_child().get_child()
-        # self.window.set_hexpand(True)
+
+        self.__enabled = True
 
     def __add__widget(self, widget):
         self.box.pack_start(widget, False, False, 0)
 
     def set_option(self, name, values, option_type, label=None, show_separator=True, attach=True, allow_multiple=True,
                    **kwargs):
+        self.__enabled = False
         if not allow_multiple:
             # remove any other duplicate if Widget is attached
             self.remove_option(name)
@@ -74,8 +73,11 @@ class OptionsWindow(OptionsChangeListener):
 
         self.options[name] = option
         self.options_values[name] = option.value
+        self.__enabled = True
+        if option_type == OptionType.BUTTON:
+            print(option.view.get_toplevel())
+
         return option
-        # self.receiver.on_change(self.options)
 
     def on_change(self, option):
         self.options_values[option.name] = option.value
@@ -83,7 +85,8 @@ class OptionsWindow(OptionsChangeListener):
             if option not in self.__attached_options:
                 if option.name in self.options_values:
                     self.options_values.pop(option.name)
-        self.receiver.on_change(self.options_values)
+        if self.__enabled:
+            self.receiver.on_change(self.options_values)
 
     def disable_option(self, name):
         if name in self.options:
@@ -191,7 +194,12 @@ class DropDownOption(Option):
             self.combo.append_text(value)
         self.value = values[0]
         self.combo.set_active(0)
-        # self.receiver.on_change(self)
+
+    def set_active(self, value: str):
+        if value in self.values:
+            self.combo.set_active(self.values.index(value))
+        else:
+            raise ValueError("value not in drop down values")
 
     def changed(self, combo):
         selected_text = combo.get_active_text()

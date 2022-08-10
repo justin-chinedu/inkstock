@@ -1,5 +1,7 @@
+import json
 import os
 
+import appdirs
 from gi.repository import Gtk, Gdk
 
 from core.constants import CACHE_DIR, SOURCES
@@ -10,27 +12,14 @@ from sources.source import RemoteSource, SourceType
 from windows.options_window import OptionsWindow, OptionType, OptionsChangeListener
 
 
-class ListBoxRowWithData(Gtk.ListBoxRow):
-    def __init__(self, icon, name, desc, index, source):
-        super().__init__()
-        self.index = index
-        self.icon = icon
-        self.name = name
-        self.desc = desc if desc else ""
-        self.source = source
-        self.set_margin_top(20)
-        self.set_size_request(50, 40)
-        self.add(Gtk.Label(label=name))
-
-
 class InkStockWindow(Window):
     name = "inkstocks_window"
     primary = True
 
     def __init__(self, gapp):
         super().__init__(gapp)
-        settings = Gtk.Settings.get_default()
-        settings.connect("notify::gtk-theme-name", self._on_theme_name_changed)
+        # settings = Gtk.Settings.get_default()
+        # settings.connect("notify::gtk-theme-name", self._on_theme_name_changed)
         self.app_css_dark = """
          @import url("theme/Matcha/gtk/gtk-3.0/gtk-dark-pueril.css");
          @import url("theme/inkstock_dark.css");
@@ -39,7 +28,7 @@ class InkStockWindow(Window):
          @import url("theme/Matcha/gtk/gtk-3.0/gtk-light-pueril.css");
          @import url("theme/inkstock.css");
         """
-        self._on_theme_name_changed(settings, None)
+        # self._on_theme_name_changed(settings, None)
 
         self.import_files_btn: Gtk.Button = self.widget('import_files_btn')
         self.import_files_btn.set_sensitive(False)
@@ -52,6 +41,10 @@ class InkStockWindow(Window):
         self.page_stack: Gtk.Stack = self.widget('page_stack')
         self.import_files_btn.connect('clicked', self.import_files)
         self.sources_options: Gtk.Stack = self.widget('sources_options')
+        self.setting_popover: Gtk.Popover = self.widget("settings_popover")
+        self.setting_btn: Gtk.ToggleButton = self.widget("settings_button")
+        self.setting_btn.connect("toggled", self.show_settings)
+        self.setting_popover.set_modal(False)
 
         if not os.path.exists(CACHE_DIR):
             os.mkdir(CACHE_DIR)
@@ -60,10 +53,22 @@ class InkStockWindow(Window):
                                                 pref_height=150, padding=40, aspect_ratio=SIZE_ASPECT_GROW, )
         self.import_manager = ImportManager(self)
         self.sources_windows = []
-        self.options_handler = OptionsHandler(self)
+        self.sources_handler = SourcesHandler(self)
+        self.settings_handler = SettingsHandler(self)
+        self.change_theme(self.settings_handler.settings["theme"])
+
+    def show_settings(self, btn: Gtk.ToggleButton):
+        toggled = btn.get_active()
+        if toggled:
+            self.setting_popover.popup()
+        else:
+            self.setting_popover.popdown()
 
     def _on_theme_name_changed(self, settings, _):
         name = settings.get_property("gtk-theme-name").lower()
+        self.change_theme(name)
+
+    def change_theme(self, name):
         if "dark" in name:
             self.load_css(self.app_css_dark)
         else:
@@ -95,7 +100,6 @@ class InkStockWindow(Window):
 
     def show_window(self, window, source):
         """Adds window to the page stack"""
-
         if not self.page_stack.get_child_by_name(source.name):
             self.page_stack.add_named(window.window, source.name)
         child = self.page_stack.get_child_by_name(source.name)
@@ -117,10 +121,10 @@ class InkStockWindow(Window):
     def show_sources_window(self):
         self.sources_options.set_sensitive(True)
         self.import_files_btn.set_sensitive(True)
-        self.options_handler.source_selected(self.options_handler.last_selected_source)
+        self.sources_handler.source_selected(self.sources_handler.last_selected_source)
 
 
-class OptionsHandler(OptionsChangeListener):
+class SourcesHandler(OptionsChangeListener):
     def __init__(self, window):
         self.window = window
         self.sources = [source(CACHE_DIR, self.window.import_manager) for source in RemoteSource.sources.values() if
@@ -216,3 +220,47 @@ class OptionsHandler(OptionsChangeListener):
 
         self.window.add_window(source.window_cls, source)
         self.window.show_window(source.window, source)
+
+
+class SettingsHandler(OptionsChangeListener):
+    def __init__(self, window: InkStockWindow):
+        self.window = window
+        self.options_window = OptionsWindow(self)
+        self.options_window.window.set_propagate_natural_height(True)
+        self.options_window.window.set_propagate_natural_width(True)
+        self.options_window.box.set_hexpand(True)
+        self.options_window.box.set_halign(Gtk.Align.FILL)
+        self.settings = self.retrieve_settings()
+        self.options_window.set_option("settings_text", "Appearance", OptionType.TEXTVIEW)
+        theme_option = self.options_window.set_option("theme", ["dark", "light"], OptionType.DROPDOWN, "Change Theme")
+        theme_option.set_active(self.settings["theme"])
+        self.options_window.set_option("about_text",
+                                       "\nInkstock ©2022\n\nJustin Chinedu "
+                                       "<a href='https://github.com/justin-chinedu/inkstock'>Github</a>",
+                                       OptionType.TEXTVIEW)
+
+        self.window.setting_popover.add(self.options_window.window)
+
+    def on_change(self, settings: dict):
+        if settings["theme"] != self.settings.get("theme", None):
+            self.window.change_theme(settings["theme"])
+
+        self.save_settings(settings)
+        
+    def save_settings(self, settings):
+        self.settings.update(settings)
+        pref_dir = appdirs.user_config_dir(appname="InkStock", appauthor="jaycodex")
+        if not os.path.exists(pref_dir):
+            os.mkdir(pref_dir)
+        pref_file = os.path.join(pref_dir, "preferences.json")
+        json.dump(self.settings, open(pref_file, mode="w"))
+
+    @staticmethod
+    def retrieve_settings() -> dict:
+        pref_dir = appdirs.user_config_dir(appname="InkStock", appauthor="jaycodex")
+        pref_file = os.path.join(pref_dir, "preferences.json")
+        if os.path.exists(pref_file):
+            return json.load(open(pref_file, mode="r"))
+        else:
+            # defaults
+            return {"theme": "dark"}

@@ -187,6 +187,7 @@
     </child>
   </object>
   <object class="GtkBox" id="options_select_list_box">
+    <property name="name">options_select_list_box</property>
     <property name="visible">True</property>
     <property name="can-focus">False</property>
     <property name="orientation">vertical</property>

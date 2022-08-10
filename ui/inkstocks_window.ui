@@ -218,7 +218,29 @@
                   </packing>
                 </child>
                 <child>
-                  <placeholder/>
+                  <object class="GtkToggleButton" id="settings_button">
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <property name="halign">end</property>
+                    <property name="valign">center</property>
+                    <property name="margin-end">30</property>
+                    <property name="hexpand">True</property>
+                    <property name="always-show-image">True</property>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="xpad">5</property>
+                        <property name="ypad">5</property>
+                        <property name="pixbuf">../icons/settings.svg</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left-attach">2</property>
+                    <property name="top-attach">1</property>
+                  </packing>
                 </child>
                 <child>
                   <placeholder/>
@@ -357,5 +379,14 @@
     <style>
       <class name="inkstocks"/>
     </style>
+  </object>
+  <object class="GtkPopover" id="settings_popover">
+    <property name="can-focus">False</property>
+    <property name="relative-to">settings_button</property>
+    <property name="position">bottom</property>
+    <property name="modal">False</property>
+    <child>
+      <placeholder/>
+    </child>
   </object>
 </interface>

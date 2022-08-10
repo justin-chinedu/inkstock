@@ -137,7 +137,12 @@ class Unsplash(RemoteSource, OptionsChangeListener):
         super().__init__(cache_dir, import_manager)
         self.query = ""
         # setting defaults
-        self.options = {}
+        self.options = {
+            "order_by": "relevant",
+            "orientation": "all",
+            "content_filter": "low",
+            "color": "all"
+        }
         self.options_window = OptionsWindow(self)
         self.options_window.set_option("query", None, OptionType.SEARCH, "Search Unsplash")
         self.options_window.set_option(
