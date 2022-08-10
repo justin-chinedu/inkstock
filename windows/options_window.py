@@ -74,9 +74,6 @@ class OptionsWindow(OptionsChangeListener):
         self.options[name] = option
         self.options_values[name] = option.value
         self.__enabled = True
-        if option_type == OptionType.BUTTON:
-            print(option.view.get_toplevel())
-
         return option
 
     def on_change(self, option):
